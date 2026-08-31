@@ -1,0 +1,43 @@
+{
+  "version": "rf_2026_01",
+  "training_date": "2026-08-27T22:30:16.817947+00:00",
+  "features_used": [
+    "slope",
+    "elevation_norm",
+    "ruggedness",
+    "road_proximity",
+    "drainage_proximity",
+    "settlement_density",
+    "sar_change_score"
+  ],
+  "hyperparameters": {
+    "bootstrap": true,
+    "ccp_alpha": 0.0,
+    "class_weight": "balanced",
+    "criterion": "gini",
+    "max_depth": 12,
+    "max_features": "sqrt",
+    "max_leaf_nodes": null,
+    "max_samples": null,
+    "min_impurity_decrease": 0.0,
+    "min_samples_leaf": 4,
+    "min_samples_split": 2,
+    "min_weight_fraction_leaf": 0.0,
+    "monotonic_cst": null,
+    "n_estimators": 300,
+    "n_jobs": -1,
+    "oob_score": false,
+    "random_state": 42,
+    "verbose": 0,
+    "warm_start": false
+  },
+  "cv_accuracy": 0.5,
+  "cv_accuracy_std": 0.13608276348795434,
+  "cv_scores": [
+    0.6666666666666666,
+    0.3333333333333333,
+    0.5
+  ],
+  "n_training_samples": 8,
+  "n_spatial_blocks": 3
+}

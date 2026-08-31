@@ -1,0 +1,10 @@
+{
+  "name": "GEO-SENTINEL",
+  "short_name": "GEO-SENTINEL",
+  "description": "AI landslide early warning — zone-level advisory, decision support only",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

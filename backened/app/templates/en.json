@@ -1,0 +1,5 @@
+{
+  "MODERATE": "MODERATE risk near {zone} ({district}). Stay alert around slopes and drains.",
+  "HIGH": "HIGH LANDSLIDE RISK near {zone} ({district}) due to heavy rainfall and saturated conditions. Avoid unstable slopes and follow local authority instructions.",
+  "VERY_HIGH": "VERY HIGH LANDSLIDE RISK near {zone} ({district}). Follow local authority instructions. Keep away from steep slopes and road cuttings."
+}

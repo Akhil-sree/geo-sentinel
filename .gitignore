@@ -1,0 +1,34 @@
+# Environment files and credentials (keep only blank examples)
+.env
+.env.*
+!.env.example
+backened/.env
+backened/.env.*
+!backened/.env.example
+
+# Local databases and generated uploads
+*.db
+*.sqlite
+*.sqlite3
+backened/media/
+uploads/
+
+# Local runtimes and build outputs
+node_modules/
+frontend/node_modules/
+backened/.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+dist/
+build/
+coverage/
+
+# Logs, editor settings, and OS files
+*.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

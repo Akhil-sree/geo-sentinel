@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+
+body { @apply bg-[#f0eee6] text-[#1b1c17] antialiased; }
+
+h1, h2, h3 { font-family: "EB Garamond", serif; }
+
+/* --- Leaflet --- */
+.leaflet-container { background: #e3e8e1; font-family: "Hanken Grotesk", sans-serif; }
+.leaflet-tooltip {
+  background: #ffffff; color: #1b1c17;
+  border: 1px solid #d9e2d9; box-shadow: 0 1px 4px rgba(4, 68, 47, 0.15);
+}
+.leaflet-control-attribution {
+  background: rgba(251, 249, 241, 0.85) !important;
+  color: #707973 !important; font-size: 9px !important;
+}
+.leaflet-bar a { background: #ffffff; color: #404943; border-color: #d9e2d9; }
+.leaflet-bar a:hover { background: #e4e3db; }
+
+input[type="range"] {
+  height: 6px; border-radius: 3px;
+  background: #e4e3db; accent-color: #04442f;
+}
+
+@keyframes gs-pulse { 0%, 100% { opacity: 0.55 } 50% { opacity: 1 } }
+.gs-pulsing { animation: gs-pulse 1.2s ease-in-out infinite; }

@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ./backened
+    ports: ["8000:8000"]
+    environment:
+      - DEMO_MODE=true
+      - DATABASE_URL=sqlite:///./geo_sentinel.db
+      - SMS_PROVIDER=mock
+      - STATIC_WEIGHT=0.5
+      - DYNAMIC_WEIGHT=0.5
+    volumes: ["./backened/models:/app/models", "./backened/media:/app/media"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+  frontend:
+    build: ./frontend
+    ports: ["5173:80"]
+    depends_on: [backend]

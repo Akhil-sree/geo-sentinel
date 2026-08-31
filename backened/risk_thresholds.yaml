@@ -1,0 +1,14 @@
+# CALIBRATION PARAMETERS — not scientifically validated constants.
+rainfall:
+  r24_escalation_mm: 80
+  r72_escalation_mm: 220
+soil_moisture:
+  saturation_fraction: 0.55
+escalation:
+  min_static_susceptibility: 0.45
+  boost: 0.08
+classes:
+  boundaries: [0.25, 0.50, 0.75]   # LOW / MODERATE / HIGH / VERY_HIGH
+fusion:
+  static_weight: 0.40
+  dynamic_weight: 0.60

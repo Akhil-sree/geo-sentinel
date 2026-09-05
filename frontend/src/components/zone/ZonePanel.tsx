@@ -1,8 +1,11 @@
 import RainfallChart from "./RainfallChart";
 import DynamicRiskChart from "./DynamicRiskChart";
+import RiskTrajectoryChart from "./RiskTrajectoryChart";
+import SlopeHealthTimeline from "./SlopeHealthTimeline";
 import EventInventory from "./EventInventory";
 import AlertSection from "./AlertSection";
 import TerrainFacts from "./TerrainFacts";
+import SlopeStateBadge from "../common/SlopeStateBadge";
 import type { ZoneRisk } from "../../types/risk";
 
 const soilLabel = (sm: number) =>
@@ -29,71 +32,56 @@ export function ZonePanel({ risk, zoneId }: ZonePanelProps) {
           </h3>
 
           <span className="text-[10px] text-[#707973]">
-            📍 Meghalaya
+            Meghalaya
           </span>
 
         </div>
 
         <p className="mb-2 text-[10px] text-[#404943]">
-          📍 {risk.name}, {risk.district}
+          {risk.name}, {risk.district}
         </p>
 
         <div className="grid grid-cols-3 gap-2 border-b border-[#e4e3db] pb-2">
 
-          {/* Overall Risk */}
+          {/* Slope State */}
           <div>
-
             <p className="text-[8px] font-bold tracking-wider text-[#707973]">
-              OVERALL RISK
+              SLOPE STATE
             </p>
-
-            <span
-              className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${
-                risk.severity === "VERY_HIGH" ||
-                risk.severity === "HIGH"
-                  ? "bg-[#ba1a1a]"
-                  : risk.severity === "MODERATE"
-                    ? "bg-[#d97706]"
-                    : "bg-[#245c45]"
-              }`}
-            >
-              ⚠ {risk.severity.replace("_", " ")}
-            </span>
-
+            {risk.slope_state ? (
+              <div className="mt-0.5">
+                <SlopeStateBadge state={risk.slope_state} label={risk.slope_state_label} size="md" stressScore={risk.slope_stress_score} />
+              </div>
+            ) : (
+              <span className="mt-0.5 inline-block rounded-full bg-[#e4e3db] px-2 py-0.5 text-[10px] text-[#707973]">
+                Analyzing...
+              </span>
+            )}
           </div>
-
 
           {/* Risk Score */}
           <div>
-
             <p className="text-[8px] font-bold tracking-wider text-[#707973]">
               RISK SCORE
             </p>
-
             <p className="text-2xl font-bold text-[#04442f]">
               {risk.risk_score.toFixed(2)}
-
               {risk.escalated && (
                 <span className="ml-1 rounded bg-[#ba1a1a]/10 px-1 text-[9px] font-bold text-[#ba1a1a]">
-                  ▲ ESC
+                  ESC
                 </span>
               )}
             </p>
-
           </div>
-
 
           {/* Model Confidence */}
           <div>
-
             <p className="text-[8px] font-bold tracking-wider text-[#707973]">
               MODEL CONFIDENCE
             </p>
-
             <p className="text-xl font-bold text-[#04442f]">
               {Math.round(risk.confidence * 100)}%
             </p>
-
           </div>
 
         </div>
@@ -177,6 +165,14 @@ export function ZonePanel({ risk, zoneId }: ZonePanelProps) {
         </div>
 
       </div>
+
+      {/* Risk Trajectory — full width */}
+      <div className="overflow-hidden rounded bg-white p-2 shadow-sm">
+        <RiskTrajectoryChart zoneId={zoneId} />
+      </div>
+
+      {/* Slope Digital Health — full width */}
+      <SlopeHealthTimeline zoneId={zoneId} />
 
 
       {/* =====================================================

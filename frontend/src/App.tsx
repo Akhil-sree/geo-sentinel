@@ -4,6 +4,7 @@ import CommandCenter from "./pages/CommandCenter";
 import ReportsPage from "./pages/ReportsPage";
 import AlertConsole from "./pages/AlertConsole";
 import AboutPage from "./pages/AboutPage";
+import InsightsPage from "./pages/InsightsPage";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/alerts" element={<AlertConsole />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/insights" element={<InsightsPage />} />
       </Routes>
     </div>
   );

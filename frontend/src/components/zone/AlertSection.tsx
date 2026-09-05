@@ -14,7 +14,7 @@ export default function AlertSection({ risk }: { risk: ZoneRisk }) {
     setBusy(true);
     try {
       const res = await sendAlert(risk.zone_id, risk.severity, lang);
-      setResult(`res.sentmessage(s)via{res.sent} message(s) viares.sentmessage(s)via{res.provider} (MockSMSProvider — demo)`);
+      setResult(`Sent ${res.sent} message(s) via ${res.provider} (MockSMSProvider — demo)`);
       toast(`Alert dispatched to ${res.sent} recipient(s)`);
     } catch (e: any) {
       toast(e?.response?.data?.detail ?? "dispatch blocked", "err");

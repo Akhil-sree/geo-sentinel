@@ -259,7 +259,21 @@ def run_pipeline(t_hours: int):
             db.add(risk_record)
 
             # -------------------------------------------------
-            # 12. Prepare API response
+            # 12. Slope state analysis
+            # -------------------------------------------------
+
+            from ..api.risk import _compute_slope_state
+            slope_state = _compute_slope_state(
+                rf_res["static_score"],
+                dyn["dynamic_score"],
+                fusion_result["risk_score"],
+                rain_features["rainfall_72h"],
+                soil_features["soil_moisture_current"],
+                fusion_result["escalated"],
+            )
+
+            # -------------------------------------------------
+            # 13. Prepare API response
             # -------------------------------------------------
 
             results.append({
@@ -330,6 +344,11 @@ def run_pipeline(t_hours: int):
                     "summary",
                     "",
                 ),
+
+                "slope_state": slope_state["state"],
+                "slope_state_label": slope_state["label"],
+                "slope_state_color": slope_state["color"],
+                "slope_stress_score": slope_state["stress_score"],
 
                 "model_versions": {
                     "rf": rf_res["version"],

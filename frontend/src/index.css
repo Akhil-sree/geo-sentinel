@@ -28,3 +28,55 @@ input[type="range"] {
 
 @keyframes gs-pulse { 0%, 100% { opacity: 0.55 } 50% { opacity: 1 } }
 .gs-pulsing { animation: gs-pulse 1.2s ease-in-out infinite; }
+
+@keyframes hotspot-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.4); opacity: 0.3; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+.hotspot-pulse { animation: hotspot-ring 2s ease-in-out infinite; }
+
+@keyframes sim-flash {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.4; }
+}
+.sim-flash { animation: sim-flash 1.5s ease-in-out infinite; }
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in { animation: slide-in-right 0.3s ease-out; }
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-count { animation: count-up 0.4s ease-out; }
+
+@keyframes sar-scan {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.sar-scan-line {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background-size: 200% 100%;
+  animation: sar-scan 3s linear infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(186, 26, 26, 0.5); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(186, 26, 26, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(186, 26, 26, 0); }
+}
+.pulse-alert { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}

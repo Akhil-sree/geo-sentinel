@@ -1,4 +1,5 @@
 {
+  "MODERATE": "GEO-SENTINEL: Moderate landslide risk for {zone} ({district}). Stay informed and monitor conditions. Zone-level advisory only.",
   "HIGH": "GEO-SENTINEL: High landslide risk advisory for {zone} ({district}). Avoid steep slopes and road cuts during heavy rain. Zone-level advisory only.",
   "VERY_HIGH": "GEO-SENTINEL: VERY HIGH landslide risk for {zone} ({district}). Avoid slopes/road cuts; follow local authorities. Zone-level advisory only."
 }

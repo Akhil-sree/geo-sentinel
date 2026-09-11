@@ -150,3 +150,36 @@ class SARObs(Base):
 
 # AlertLog alias (older routers/alerts.py used this name)
 AlertLog = Alert
+
+
+class RoadSegment(Base):
+    """Road segments between zones — status tracking for connectivity dashboard."""
+    __tablename__ = "road_segments"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    from_zone = Column(String, ForeignKey("zones.id"), index=True)
+    to_zone = Column(String, ForeignKey("zones.id"), index=True)
+    road_type = Column(String, default="district")     # national / state / district / village
+    length_km = Column(Float, default=0.0)
+    status = Column(String, default="OPEN")             # OPEN / BLOCKED / DAMAGED / UNDER_REPAIR
+    blockage_reason = Column(String, nullable=True)     # landslide / flood / slope_failure / maintenance
+    last_updated = Column(DateTime, server_default=func.now())
+    reported_by = Column(String, default="SYSTEM")
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+
+
+class EmergencyTask(Base):
+    """Emergency response tasks — assigned to zones based on risk priority."""
+    __tablename__ = "emergency_tasks"
+    id = Column(Integer, primary_key=True)
+    zone_id = Column(String, ForeignKey("zones.id"), index=True)
+    task_type = Column(String, nullable=False)          # evacuation / road_clear / shelter_setup / patrol / supply
+    title = Column(String, nullable=False)
+    description = Column(Text)
+    priority = Column(String, default="MEDIUM")         # CRITICAL / HIGH / MEDIUM / LOW
+    status = Column(String, default="PENDING")          # PENDING / IN_PROGRESS / COMPLETED / CANCELLED
+    assigned_team = Column(String, nullable=True)
+    estimated_time = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    completed_at = Column(DateTime, nullable=True)

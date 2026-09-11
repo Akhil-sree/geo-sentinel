@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { postScenarioSimulation } from "../../api/risk";
 import { useUIStore } from "../../store/uiStore";
 import type { SimulationResult } from "../../types/risk";
@@ -24,8 +24,38 @@ export default function RainfallScenarioControl({ onResults }: { onResults?: (re
   const [results, setResults] = useState<SimulationResult[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [warning, setWarning] = useState("");
+  const [dragging, setDragging] = useState(false);
   const simTime = useUIStore((s) => s.simTime);
   const selectZone = useUIStore((s) => s.selectZone);
+  const debounceRef = useRef<number | null>(null);
+
+  // Debounced simulation on slider drag — updates map colors in real-time
+  const fireSimulation = useCallback((mult: number, cont: number) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      setLoading(true);
+      postScenarioSimulation({ multiplier: mult, continued_hours: cont, t: simTime })
+        .then((r) => {
+          setResults(r.results);
+          setWarning(r.warning);
+          onResults?.(r.results);
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }, 150); // 150ms debounce for smooth drag
+  }, [simTime, onResults]);
+
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  const handleSliderChange = (val: number) => {
+    setMultiplier(val);
+    setDragging(true);
+    fireSimulation(val, continued);
+  };
+
+  const handleSliderRelease = () => {
+    setDragging(false);
+  };
 
   const runSimulation = useCallback(() => {
     setLoading(true);
@@ -38,6 +68,10 @@ export default function RainfallScenarioControl({ onResults }: { onResults?: (re
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [multiplier, continued, simTime, onResults]);
+
+  // Zone-level risk summary
+  const escalatedCount = results?.filter((r) => r.escalated).length ?? 0;
+  const maxRisk = results ? Math.max(...results.map((r) => r.simulated_risk)) : 0;
 
   return (
     <div className="rounded bg-white p-3 shadow-sm">
@@ -54,7 +88,7 @@ export default function RainfallScenarioControl({ onResults }: { onResults?: (re
       <div className="mb-2">
         <div className="mb-1 flex justify-between text-[8px] text-[#707973]">
           <span>Current</span>
-          <span className="font-bold text-[#1b1c17]">
+          <span className={`font-bold ${multiplier > 1.5 ? "text-[#ba1a1a]" : multiplier > 1.25 ? "text-[#ea580c]" : "text-[#1b1c17]"}`}>
             {multiplier === 1.0 ? "Current" : `+${((multiplier - 1) * 100).toFixed(0)}%`}
           </span>
           <span>Extreme</span>
@@ -65,14 +99,16 @@ export default function RainfallScenarioControl({ onResults }: { onResults?: (re
           max={2.0}
           step={0.05}
           value={multiplier}
-          onChange={(e) => setMultiplier(Number(e.target.value))}
+          onChange={(e) => handleSliderChange(Number(e.target.value))}
+          onMouseUp={handleSliderRelease}
+          onTouchEnd={handleSliderRelease}
           className="w-full accent-[#04442f]"
         />
         <div className="mt-1 flex gap-1">
           {MULTIPLIER_PRESETS.map((p) => (
             <button
               key={p.value}
-              onClick={() => setMultiplier(p.value)}
+              onClick={() => { setMultiplier(p.value); fireSimulation(p.value, continued); }}
               className={`flex-1 rounded py-0.5 text-[8px] font-bold ${
                 multiplier === p.value
                   ? "bg-[#04442f] text-white"
@@ -92,7 +128,7 @@ export default function RainfallScenarioControl({ onResults }: { onResults?: (re
           {CONTINUED_PRESETS.map((p) => (
             <button
               key={p.value}
-              onClick={() => setContinued(p.value)}
+              onClick={() => { setContinued(p.value); fireSimulation(multiplier, p.value); }}
               className={`flex-1 rounded py-1 text-[9px] font-bold ${
                 continued === p.value
                   ? "bg-[#04442f] text-white"
@@ -114,8 +150,25 @@ export default function RainfallScenarioControl({ onResults }: { onResults?: (re
         {loading ? "SIMULATING..." : "RUN SCENARIO"}
       </button>
 
+      {/* Quick summary when dragging */}
+      {dragging && results && (
+        <div className="mt-2 flex items-center gap-2 rounded border border-[#d97706] bg-[#d97706]/5 p-1.5">
+          <span className="text-[8px] font-bold text-[#92400e]">PREVIEW</span>
+          <span className="text-[9px] text-[#404943]">
+            Max risk: <span className="font-bold" style={{ color: maxRisk > 0.75 ? "#ba1a1a" : maxRisk > 0.5 ? "#ea580c" : "#d97706" }}>
+              {(maxRisk * 100).toFixed(0)}%
+            </span>
+          </span>
+          {escalatedCount > 0 && (
+            <span className="text-[8px] font-bold text-[#ba1a1a]">
+              {escalatedCount} ESC
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Results */}
-      {results && (
+      {results && !dragging && (
         <div className="mt-2 space-y-1.5">
           <p className="text-[8px] font-bold text-[#92400e]">{warning}</p>
 

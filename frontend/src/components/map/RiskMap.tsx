@@ -1,21 +1,27 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
 import ZonePolygon from "./ZonePolygon";
+import Terrain3DView from "./Terrain3DView";
 import { ReportMarker } from "./ReportMarker";
 import MapLegend from "./MapLegend";
 import MapControls from "./MapControls";
 import HotspotMarker from "./HotspotMarker";
 import SimulationOverlay from "./SimulationOverlay";
+import CellHeatmapLayer from "./CellHeatmapLayer";
+import TemporalCellAnimation from "./TemporalCellAnimation";
 import { useUIStore } from "../../store/uiStore";
 import { haversineKm } from "../../lib/geo";
 import { consumePolygonClick } from "../../lib/clickFlag";
+import { getRoadSegments, type RoadSegment } from "../../api/dashboard";
 import type { Zone } from "../../types/zone";
 import type { ZoneRisk, IntensificationResult, Hotspot, SimulationResult } from "../../types/risk";
 
 const CENTER: [number, number] = [25.45, 91.1]; // Meghalaya
+
+export type MapMode = "2d" | "3d";
 
 function MapClickHandler({ zones }: { zones: Zone[] }) {
   const selectZone = useUIStore((s) => s.selectZone);
@@ -96,14 +102,21 @@ function HeatmapLayer({ risks, zones }: { risks: ZoneRisk[]; zones: Zone[] }) {
   return null;
 }
 
-export default function RiskMap({ zones, risks, selectedId, reports, onSelect, intensification, hotspots, simulationResults }: {
+export default function RiskMap({ zones, risks, selectedId, reports, onSelect, intensification, hotspots, simulationResults, mapMode, onToggleMode }: {
   zones: Zone[]; risks: ZoneRisk[]; selectedId: string | null;
   reports: any[]; onSelect: (id: string) => void;
   intensification?: IntensificationResult[];
   hotspots?: Hotspot[];
   simulationResults?: SimulationResult[] | null;
+  mapMode?: MapMode;
+  onToggleMode?: (mode: MapMode) => void;
 }) {
   const selectZone = useUIStore((s) => s.selectZone);
+  const [roads, setRoads] = useState<RoadSegment[]>([]);
+
+  useEffect(() => {
+    getRoadSegments().then((r) => setRoads(r.roads)).catch(() => {});
+  }, []);
 
   const intMap = useMemo(() => new Map(
     (intensification ?? []).map((i) => [i.zone_id, i])
@@ -114,39 +127,57 @@ export default function RiskMap({ zones, risks, selectedId, reports, onSelect, i
     [hotspots]
   );
 
+  if (mapMode === "3d") {
+    return (
+      <Terrain3DView
+        zones={zones}
+        risks={risks}
+        roads={roads}
+        selectedId={selectedId}
+        onSelect={(id) => { selectZone(id); onSelect(id); }}
+        onBackTo2D={() => onToggleMode?.("2d")}
+      />
+    );
+  }
+
   return (
-    <MapContainer center={CENTER} zoom={8} className="h-full w-full"
-                  preferCanvas style={{ background: "#e3e8e1" }}>
-      <TileLayer
-        attribution='Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
-        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
+    <div className="relative h-full w-full">
+      <MapContainer center={CENTER} zoom={8} className="h-full w-full"
+                    preferCanvas style={{ background: "#e3e8e1" }}>
+        <TileLayer
+          attribution='Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
 
-      <TileLayer
-        url="https://tiles.wmflabs.org/hillshading/{z}/{x}/{y}.png"
-        opacity={0.35}
-        attribution='Hillshade SRTM' />
+        <TileLayer
+          url="https://tiles.wmflabs.org/hillshading/{z}/{x}/{y}.png"
+          opacity={0.35}
+          attribution='Hillshade SRTM' />
 
-      <HeatmapLayer risks={risks} zones={zones} />
+        <HeatmapLayer risks={risks} zones={zones} />
 
-      <MapClickHandler zones={zones} />
+        <MapClickHandler zones={zones} />
 
-      {simulationResults && <SimulationOverlay results={simulationResults} zones={zones} />}
+        {simulationResults && <SimulationOverlay results={simulationResults} zones={zones} />}
 
-      {zones.map((z) => (
-        <ZonePolygon key={z.id} zone={z} risk={risks.find((r) => r.zone_id === z.id)}
-          selected={z.id === selectedId}
-          onSelect={(id) => { selectZone(id); onSelect(id); }}
-          intensification={intMap.get(z.id) ?? null} />
-      ))}
+        <CellHeatmapLayer zones={zones} />
+        <TemporalCellAnimation visible={!!simulationResults} />
 
-      {topHotspots.map((h) => (
-        <HotspotMarker key={h.zone_id} hotspot={h} zones={zones} />
-      ))}
+        {zones.map((z) => (
+          <ZonePolygon key={z.id} zone={z} risk={risks.find((r) => r.zone_id === z.id)}
+            selected={z.id === selectedId}
+            onSelect={(id) => { selectZone(id); onSelect(id); }}
+            intensification={intMap.get(z.id) ?? null} />
+        ))}
 
-      {reports.filter((r) => r.status === "PENDING" || r.status === "VERIFIED")
-              .map((r) => <ReportMarker key={r.id} report={r} />)}
+        {topHotspots.map((h) => (
+          <HotspotMarker key={h.zone_id} hotspot={h} zones={zones} />
+        ))}
 
-      <MapLegend />
-      <MapControls zones={zones} />
-    </MapContainer>
+        {reports.filter((r) => r.status === "PENDING" || r.status === "VERIFIED")
+                .map((r) => <ReportMarker key={r.id} report={r} />)}
+
+        <MapLegend />
+        <MapControls zones={zones} mapMode={mapMode} onToggleMode={onToggleMode} />
+      </MapContainer>
+    </div>
   )}

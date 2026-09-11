@@ -1,0 +1,5 @@
+{
+  "MODERATE": "GEO-SENTINEL: Ka jingsngew bhaipara kham kaba shnong {zone} ({district}). Don don iaphi bad kiyno ka mih pule shnong.",
+  "HIGH": "GEO-SENTINEL: U jingsngew bhaipara kaba kham shnong {zone} ({district}). Don iada ki bynriew bad ki kren ka mih shnong.\u00a0Ka jingsngew beta.",
+  "VERY_HIGH": "GEO-SENTINEL: U jingsngew bhaipara kaba kham khylliat shnong {zone} ({district}). Don iada ki bynriew/kren ka mih, pynlong iaphi ki them dorbar. Ka jingsngew beta."
+}

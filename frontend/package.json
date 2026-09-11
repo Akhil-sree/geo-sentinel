@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "copy-cesium": "node scripts/copy-cesium.mjs",
+    "predev": "node scripts/copy-cesium.mjs",
+    "prebuild": "node scripts/copy-cesium.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
@@ -11,6 +14,7 @@
   "dependencies": {
     "@types/leaflet.heat": "^0.2.5",
     "axios": "^1.20.0",
+    "cesium": "^1.145.0",
     "framer-motion": "^13.1.1",
     "idb-keyval": "^6.3.0",
     "leaflet": "^1.9.4",

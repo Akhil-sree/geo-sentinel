@@ -99,7 +99,7 @@ export default function RainfallChart({
                 border: "1px solid #d9e2d9",
               }}
               formatter={(value) => [
-                `${Number(value).toFixed(1)} mm/h`,
+                `${Number(value ?? 0).toFixed(1)} mm/h`,
                 "Rainfall",
               ]}
               labelFormatter={(label) => `Time: ${label}`}

@@ -1,10 +1,15 @@
 import { NavLink, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import LowBandwidthToggle from "../common/LowBandwidthToggle";
 
 const NAV = [
   { to: "/", label: "COMMAND CENTER", icon: "◎" },
+  { to: "/dashboard", label: "RISK DASHBOARD", icon: "▦" },
+  { to: "/roads", label: "ROADS", icon: "▤" },
+  { to: "/weather", label: "WEATHER", icon: "☁" },
+  { to: "/emergency", label: "EMERGENCY", icon: "⚠" },
   { to: "/reports", label: "REPORTS", icon: "▣" },
-  { to: "/alerts", label: "ALERTS", icon: "⚠" },
+  { to: "/alerts", label: "ALERTS", icon: "✉" },
   { to: "/insights", label: "DATA & INSIGHTS", icon: "📊" },
   { to: "/about", label: "ABOUT", icon: "ⓘ" },
 ];
@@ -171,13 +176,16 @@ export default function TopBar() {
         {/* =================================================
             LOCATION SELECTOR
         ================================================== */}
-        <button
-          type="button"
-          className="flex items-center gap-1 rounded px-3 py-1.5 text-[10px] font-semibold text-sky-100 transition hover:bg-white/10"
-        >
-          📍 Meghalaya
-          <span className="text-[9px] opacity-70">▼</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <LowBandwidthToggle />
+          <button
+            type="button"
+            className="flex items-center gap-1 rounded px-3 py-1.5 text-[10px] font-semibold text-sky-100 transition hover:bg-white/10"
+          >
+            📍 Meghalaya
+            <span className="text-[9px] opacity-70">▼</span>
+          </button>
+        </div>
 
       </nav>
 

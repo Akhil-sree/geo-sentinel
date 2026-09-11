@@ -80,6 +80,10 @@ def zones(
             "slope": z.slope,
             "elevation": z.elevation,
             "population": z.population,
+            "ruggedness": z.ruggedness,
+            "road_proximity": z.road_proximity,
+            "drainage_proximity": z.drainage_proximity,
+            "settlement_density": z.settlement_density,
             "sar_acquisition_date": z.sar_acquisition_date,
             "sar_change_score": z.sar_change_score,
         }
@@ -970,4 +974,434 @@ def _generate_risk_explanation(result, zone, state):
             else "Verify locally" if state["state"] == "STRESSED"
             else "Monitor"
         ),
+    }
+
+
+# =============================================================
+# PER-CELL RISK GRID (flagship zone deep-dive)
+# =============================================================
+
+def _generate_hex_grid(lat, lng, radius_km=4.0, cell_size_km=0.4):
+    """Generate hex grid points within a circular area."""
+    import math
+    cells = []
+    dx = cell_size_km
+    dy = cell_size_km * math.sqrt(3) / 2
+    cos_lat = math.cos(math.radians(lat))
+
+    rows = int(radius_km / dy) + 1
+    cols = int(radius_km / (dx / 2)) + 1
+
+    for r in range(-rows, rows + 1):
+        for c in range(-cols, cols + 1):
+            cell_lat = lat + r * dy / 111.0
+            offset = (dx / 2) if r % 2 else 0
+            cell_lng = lng + (c * dx + offset) / (111.0 * cos_lat)
+            dist = math.sqrt(((cell_lat - lat) * 111) ** 2 + ((cell_lng - lng) * 111 * cos_lat) ** 2)
+            if dist <= radius_km:
+                cells.append({"lat": cell_lat, "lng": cell_lng, "dist_km": dist})
+    return cells
+
+
+def _perturb_features(zone, dist_km, rng):
+    """Generate spatially-varying terrain features for a cell."""
+    import numpy as np
+    base_slope = float(zone.slope)
+    base_elev = float(zone.elevation)
+    base_rugged = float(zone.ruggedness)
+    base_road = float(zone.road_proximity)
+    base_drain = float(zone.drainage_proximity)
+    base_settle = float(zone.settlement_density)
+    base_sar = float(zone.sar_change_score or 0.0)
+
+    # Spatially correlated noise: closer cells have similar features
+    noise_scale = max(0.1, dist_km / 5.0)
+
+    return [
+        max(0, min(60, base_slope + rng.normal(0, 6 * noise_scale))),
+        max(0, min(1.0, base_elev / 2000.0 + rng.normal(0, 0.08 * noise_scale))),
+        max(0, min(1.0, base_rugged + rng.normal(0, 0.12 * noise_scale))),
+        max(0, min(1.0, base_road + rng.normal(0, 0.10 * noise_scale))),
+        max(0, min(1.0, base_drain + rng.normal(0, 0.10 * noise_scale))),
+        max(0, min(1.0, base_settle + rng.normal(0, 0.08 * noise_scale))),
+        max(0, min(1.0, base_sar + rng.normal(0, 0.06 * noise_scale))),
+    ]
+
+
+@router.get("/risk/{zone_id}/cell-grid")
+def cell_risk_grid(
+    zone_id: str,
+    t: int = Query(168, ge=24, le=168),
+    resolution: int = Query(20, ge=10, le=30),
+    db: Session = Depends(get_db),
+):
+    """
+    Per-cell risk grid for the flagship zone deep-dive.
+    Runs the trained RF model on each terrain cell independently.
+    """
+    import numpy as np
+    from ..ml.rf_model import RFModel
+
+    zone = db.query(Zone).filter(Zone.id == zone_id).first()
+    if not zone:
+        return {"error": "zone not found", "cells": []}
+
+    rf = RFModel()
+    if not rf.available():
+        return {"error": "RF model not trained", "cells": []}
+
+    # Run pipeline to get dynamic score and environmental context
+    results = sim.run_pipeline(t)
+    zone_result = next((r for r in results if r["zone_id"] == zone_id), None)
+    dynamic_score = zone_result["dynamic_score"] if zone_result else 0.5
+    rainfall_72h = zone_result["rainfall_72h"] if zone_result else 0.0
+    soil_moisture = zone_result["soil_moisture"] if zone_result else 0.3
+
+    # Generate hex grid
+    lat = float(zone.latitude)
+    lng = float(zone.longitude)
+    cell_size_km = 8.0 / resolution  # roughly covers 4km radius
+    grid = _generate_hex_grid(lat, lng, radius_km=3.5, cell_size_km=cell_size_km)
+
+    rng = np.random.RandomState(42)  # reproducible
+
+    cells = []
+    for cell in grid:
+        features = _perturb_features(zone, cell["dist_km"], rng)
+        pred = rf.model.predict_proba([features])[0]
+        classes = list(rf.model.classes_)
+        static_score = sum(p * c / 2.0 for p, c in zip(pred, classes))
+        static_score = min(1.0, max(0.0, static_score))
+
+        # Combine with dynamic for fused risk
+        from ..ml.fusion import fuse
+        fusion = fuse(
+            static_score, dynamic_score,
+            rainfall_72h * max(0.3, 1.0 - cell["dist_km"] / 5.0),
+            rainfall_72h,
+            min(0.95, soil_moisture + rng.normal(0, 0.05)),
+        )
+
+        # Slope state
+        state = _compute_slope_state(
+            static_score, dynamic_score, fusion["risk_score"],
+            rainfall_72h, soil_moisture, fusion["escalated"],
+        )
+
+        cells.append({
+            "lat": cell["lat"],
+            "lng": cell["lng"],
+            "static_score": round(static_score, 4),
+            "risk_score": round(fusion["risk_score"], 4),
+            "severity": fusion["severity"],
+            "slope_state": state["state"],
+            "slope_state_color": state["color"],
+            "stress_score": round(state["stress_score"], 4),
+            "escalated": fusion["escalated"],
+        })
+
+    return {
+        "zone_id": zone_id,
+        "name": zone.name,
+        "cell_count": len(cells),
+        "resolution": resolution,
+        "cells": cells,
+    }
+
+
+# =============================================================
+# TEMPORAL CELL GRID (flagship zone animation)
+# =============================================================
+
+@router.get("/risk/{zone_id}/cell-grid/temporal")
+def temporal_cell_grid(
+    zone_id: str,
+    db: Session = Depends(get_db),
+    resolution: int = Query(12, ge=8, le=16),
+):
+    """
+    Per-cell risk at multiple timesteps for temporal animation.
+    Returns cell grids at T-72h, T-48h, T-24h, NOW.
+    Optimized: runs pipeline once per unique timestep, uses batch RF prediction.
+    """
+    import numpy as np
+    from ..ml.rf_model import RFModel
+
+    zone = db.query(Zone).filter(Zone.id == zone_id).first()
+    if not zone:
+        return {"error": "zone not found", "timesteps": []}
+
+    rf = RFModel()
+    if not rf.available():
+        return {"error": "RF model not trained", "timesteps": []}
+
+    timesteps = [96, 120, 144, 168]
+    t_labels = ["T-72h", "T-48h", "T-24h", "NOW"]
+
+    lat = float(zone.latitude)
+    lng = float(zone.longitude)
+    cell_size_km = 8.0 / resolution
+    grid = _generate_hex_grid(lat, lng, radius_km=3.5, cell_size_km=cell_size_km)
+
+    rng_base = np.random.RandomState(42)
+    base_features = np.array([_perturb_features(zone, c["dist_km"], rng_base) for c in grid])
+
+    # Batch predict static scores once — same for all timesteps
+    static_scores = rf.model.predict_proba(base_features)
+    classes = list(rf.model.classes_)
+    static_vec = np.array([min(1.0, max(0.0, sum(p * c / 2.0 for p, c in zip(proba, classes)))) for proba in static_scores])
+
+    from ..ml.fusion import fuse
+
+    timesteps_data = []
+    for ti, (t_val, t_label) in enumerate(zip(timesteps, t_labels)):
+        results = sim.run_pipeline(t_val)
+        zone_result = next((r for r in results if r["zone_id"] == zone_id), None)
+        dynamic_score = zone_result["dynamic_score"] if zone_result else 0.5
+        rainfall_72h = zone_result["rainfall_72h"] if zone_result else 0.0
+        soil_moisture = zone_result["soil_moisture"] if zone_result else 0.3
+
+        rng = np.random.RandomState(42 + ti)
+        cells = []
+        for ci, cell in enumerate(grid):
+            soil_proj = min(0.95, soil_moisture + rng.normal(0, 0.03))
+            rain_local = rainfall_72h * max(0.3, 1.0 - cell["dist_km"] / 5.0)
+
+            fusion = fuse(
+                float(static_vec[ci]), dynamic_score,
+                rain_local, rainfall_72h, soil_proj,
+            )
+            state = _compute_slope_state(
+                float(static_vec[ci]), dynamic_score, fusion["risk_score"],
+                rainfall_72h, soil_proj, fusion["escalated"],
+            )
+
+            cells.append({
+                "lat": cell["lat"],
+                "lng": cell["lng"],
+                "risk_score": round(fusion["risk_score"], 4),
+                "slope_state": state["state"],
+                "slope_state_color": state["color"],
+                "stress_score": round(state["stress_score"], 4),
+            })
+
+        timesteps_data.append({
+            "t": t_val,
+            "label": t_label,
+            "cells": cells,
+        })
+
+    return {
+        "zone_id": zone_id,
+        "name": zone.name,
+        "timesteps": timesteps_data,
+    }
+
+
+# =============================================================
+# WEATHER-LINKED RISK FORECAST
+# =============================================================
+
+@router.get("/risk/{zone_id}/forecast")
+def weather_forecast(
+    zone_id: str,
+    t: int = Query(168, ge=24, le=168),
+    db: Session = Depends(get_db),
+):
+    """
+    Weather-linked risk forecast for a zone.
+    Projects rainfall and risk trajectory forward 72 hours.
+    """
+    import math
+
+    zone = db.query(Zone).filter(Zone.id == zone_id).first()
+    if not zone:
+        return {"error": "zone not found"}
+
+    # Run current pipeline for baseline
+    results = sim.run_pipeline(t)
+    zone_result = next((r for r in results if r["zone_id"] == zone_id), None)
+    if not zone_result:
+        return {"error": "no data"}
+
+    # Synthetic forecast: extend storm pattern forward
+    base_rain_24h = zone_result["rainfall_24h"]
+    base_rain_72h = zone_result["rainfall_72h"]
+    soil = zone_result["soil_moisture"]
+    static = zone_result["static_score"]
+    dynamic = zone_result["dynamic_score"]
+
+    forecast_hours = [24, 48, 72]
+    forecasts = []
+
+    for fh in forecast_hours:
+        # Project rainfall: assume monsoon trend continues
+        t_future = t + fh
+        # Synthetic: rainfall ramps up then tapers
+        rain_multiplier = 1.0 + 0.3 * math.sin(math.pi * t_future / 200)
+        projected_rain_24h = base_rain_24h * rain_multiplier
+        projected_rain_72h = base_rain_72h * (1 + 0.1 * fh / 72)
+        projected_soil = min(0.95, soil + 0.01 * fh / 24)
+
+        from ..ml.fusion import fuse
+        fusion = fuse(static, dynamic, projected_rain_24h, projected_rain_72h, projected_soil)
+
+        state = _compute_slope_state(
+            static, dynamic, fusion["risk_score"],
+            projected_rain_72h, projected_soil, fusion["escalated"],
+        )
+
+        # Rainfall intensity label
+        if projected_rain_24h > 100:
+            rain_label = "HEAVY"
+            rain_color = "#ba1a1a"
+        elif projected_rain_24h > 60:
+            rain_label = "MODERATE"
+            rain_color = "#ea580c"
+        elif projected_rain_24h > 30:
+            rain_label = "LIGHT"
+            rain_color = "#d97706"
+        else:
+            rain_label = "NONE"
+            rain_color = "#245c45"
+
+        forecasts.append({
+            "hours_ahead": fh,
+            "projected_rainfall_24h": round(projected_rain_24h, 1),
+            "projected_rainfall_72h": round(projected_rain_72h, 1),
+            "projected_soil_moisture": round(projected_soil, 3),
+            "projected_risk": round(fusion["risk_score"], 4),
+            "projected_severity": fusion["severity"],
+            "slope_state": state["state"],
+            "slope_state_label": state["label"],
+            "slope_state_color": state["color"],
+            "escalated": fusion["escalated"],
+            "rainfall_intensity": rain_label,
+            "rainfall_color": rain_color,
+        })
+
+    # Overall forecast verdict
+    last = forecasts[-1]
+    first = forecasts[0]
+    risk_change = last["projected_risk"] - first["projected_risk"]
+
+    if risk_change > 0.15:
+        verdict = "RAPID DETERIORATION expected"
+        verdict_color = "#ba1a1a"
+    elif risk_change > 0.05:
+        verdict = "GRADUAL INCREASE in risk"
+        verdict_color = "#ea580c"
+    elif risk_change < -0.05:
+        verdict = "IMPROVING conditions"
+        verdict_color = "#245c45"
+    else:
+        verdict = "STABLE conditions expected"
+        verdict_color = "#d97706"
+
+    return {
+        "zone_id": zone_id,
+        "name": zone.name,
+        "current_risk": zone_result["risk_score"],
+        "current_severity": zone_result["severity"],
+        "forecasts": forecasts,
+        "verdict": verdict,
+        "verdict_color": verdict_color,
+        "confidence_note": "Synthetic forecast based on monsoon pattern projection. Not operational weather data.",
+    }
+
+
+# =============================================================
+# EMERGENCY RESPONSE PRIORITISATION
+# =============================================================
+
+@router.get("/risk/emergency-priorities")
+def emergency_priorities(
+    t: int = Query(168, ge=24, le=168),
+    db: Session = Depends(get_db),
+):
+    """
+    Emergency response prioritisation across all zones.
+    Ranks zones by composite urgency score for dispatch planning.
+    """
+    results = sim.run_pipeline(t)
+
+    priorities = []
+    for r in results:
+        zone = db.query(Zone).filter(Zone.id == r["zone_id"]).first()
+        if not zone:
+            continue
+
+        # Urgency composite: risk * 0.4 + population_exposure * 0.25 + road_inaccessibility * 0.2 + sar_change * 0.15
+        pop_norm = min(1.0, zone.population / 150000)
+        road_inv = 1.0 - float(zone.road_proximity)  # harder to reach = higher priority
+        sar_norm = float(zone.sar_change_score or 0)
+
+        urgency = (
+            0.40 * r["risk_score"]
+            + 0.25 * pop_norm
+            + 0.20 * road_inv
+            + 0.15 * sar_norm
+        )
+
+        # Priority tier
+        if urgency >= 0.6 or r["risk_score"] >= 0.75:
+            tier = "CRITICAL"
+            tier_color = "#ba1a1a"
+            response_time = "2-4 hours"
+        elif urgency >= 0.45 or r["risk_score"] >= 0.55:
+            tier = "HIGH"
+            tier_color = "#ea580c"
+            response_time = "4-8 hours"
+        elif urgency >= 0.3:
+            tier = "MEDIUM"
+            tier_color = "#d97706"
+            response_time = "8-24 hours"
+        else:
+            tier = "LOW"
+            tier_color = "#245c45"
+            response_time = "24-48 hours"
+
+        # Evacuation route status
+        if zone.road_proximity >= 0.7:
+            evac_status = "ACCESSIBLE"
+            evac_color = "#245c45"
+        elif zone.road_proximity >= 0.5:
+            evac_status = "LIMITED"
+            evac_color = "#d97706"
+        else:
+            evac_status = "BLOCKED RISK"
+            evac_color = "#ba1a1a"
+
+        priorities.append({
+            "zone_id": r["zone_id"],
+            "name": r["name"],
+            "district": r["district"],
+            "risk_score": r["risk_score"],
+            "severity": r["severity"],
+            "slope_state": r["slope_state"],
+            "slope_state_label": r["slope_state_label"],
+            "slope_state_color": r["slope_state_color"],
+            "escalated": r["escalated"],
+            "population": zone.population,
+            "road_proximity": zone.road_proximity,
+            "urgency_score": round(urgency, 4),
+            "tier": tier,
+            "tier_color": tier_color,
+            "response_time": response_time,
+            "evac_status": evac_status,
+            "evac_color": evac_color,
+        })
+
+    priorities.sort(key=lambda x: x["urgency_score"], reverse=True)
+
+    # Assign rank
+    for i, p in enumerate(priorities):
+        p["rank"] = i + 1
+
+    return {
+        "priorities": priorities,
+        "total": len(priorities),
+        "analyzed_at": (
+            dt.datetime(2026, 7, 14) + dt.timedelta(hours=t)
+        ).isoformat(),
     }

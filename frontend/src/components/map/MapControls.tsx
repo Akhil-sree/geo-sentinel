@@ -2,9 +2,9 @@ import { useMap } from "react-leaflet";
 import { useEffect } from "react";
 import { useUIStore } from "../../store/uiStore";
 import type { Zone } from "../../types/zone";
+import type { MapMode } from "./RiskMap";
 
-/** Zooms to the selected zone; Reset button restores regional view. */
-export default function MapControls({ zones }: { zones: Zone[] }) {
+export default function MapControls({ zones, onToggleMode }: { zones: Zone[]; mapMode?: MapMode; onToggleMode?: (mode: MapMode) => void }) {
   const map = useMap();
   const selectedZoneId = useUIStore((s) => s.selectedZoneId);
 
@@ -15,11 +15,42 @@ export default function MapControls({ zones }: { zones: Zone[] }) {
 
   return (
     <div className="leaflet-top leaflet-right">
-      <button onClick={() => map.flyTo([25.45, 91.1], 8, { duration: 0.8 })}
-        className="m-3 rounded border border-slate-700 bg-[#0d1526]/95 px-2 py-1
-                   text-[10px] text-slate-300 hover:bg-slate-800">
+      <div className="leaflet-control" style={{ display: "flex", flexDirection: "column", gap: "6px", border: "none", background: "none", boxShadow: "none" }}>
+      <button
+        onClick={() => map.flyTo([25.45, 91.1], 8, { duration: 0.8 })}
+        style={{
+          background: "#0d1526",
+          border: "1px solid #475569",
+          padding: "4px 8px",
+          fontSize: "11px",
+          color: "#cbd5e1",
+          borderRadius: "4px",
+          cursor: "pointer",
+          pointerEvents: "auto",
+        }}
+      >
         ⌂ Meghalaya
       </button>
+      {onToggleMode && (
+        <button
+          onClick={() => onToggleMode("3d")}
+          style={{
+            background: "white",
+            border: "1px solid rgba(4,68,47,0.3)",
+            padding: "6px 8px",
+            fontSize: "11px",
+            fontWeight: "700",
+            color: "#04442f",
+            borderRadius: "6px",
+            cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            pointerEvents: "auto",
+          }}
+        >
+          ⛰ 3D TERRAIN
+        </button>
+      )}
+      </div>
     </div>
   );
 }

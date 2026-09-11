@@ -1,0 +1,5 @@
+{
+  "MODERATE": "GEO-SENTINEL: Kanika A'balik agrik ondak katta {zone} ({district}). Kamana gi'ong agrik omane ong'e angam nane.",
+  "HIGH": "GEO-SENTINEL: A'balik agrik ondak aman ong'e angam katta {zone} ({district}). Kona da'a rogara osong'e angam long'a nane.\u00a0Kanika katta.",
+  "VERY_HIGH": "GEO-SENTINEL: A'balik agrik ondak amang katta katta {zone} ({district}). Kona rogara osong'e angam long'a nane, kamona dakkita da'aka ong'e angam. Kanika katta."
+}

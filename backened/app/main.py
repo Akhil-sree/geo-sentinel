@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine, SessionLocal
 from app.models_db import *  # noqa: F401,F403 — ensure all tables registered
 from app.seed import seed
-from app.api import risk, reports, alerts, admin
+from app.api import risk, reports, alerts, admin, dashboard
 from app.config import MEDIA_DIR
 
 @asynccontextmanager
@@ -39,6 +39,7 @@ app.include_router(risk.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
 app.include_router(alerts.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
 
 @app.get("/health")
 def health():

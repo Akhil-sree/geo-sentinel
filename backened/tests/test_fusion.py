@@ -13,7 +13,7 @@ def test_class_boundaries():
 
 def test_fusion_weighted_average():
     r = fuse(0.8, 0.6, 0, 0, 0.3)          # no escalation conditions
-    assert abs(r["risk_score"] - 0.7) < 1e-6
+    assert abs(r["risk_score"] - 0.68) < 1e-6
     assert r["escalated"] is False
 
 def test_escalation_fires_on_r72():

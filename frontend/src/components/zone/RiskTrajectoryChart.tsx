@@ -100,13 +100,13 @@ export default function RiskTrajectoryChart({ zoneId }: { zoneId: string }) {
             <Tooltip
               contentStyle={{ fontSize: 9, borderRadius: 4, border: "1px solid #d9e2d9" }}
               formatter={(v: any, name: string) => [
-                v.toFixed(3),
+                v != null ? Number(v).toFixed(3) : "—",
                 name === "risk" ? "Fused Risk" : name === "static" ? "Static (RF)" : "Dynamic (Mamba)",
               ]}
             />
             <ReferenceLine y={0.75} stroke="#ba1a1a" strokeDasharray="3 3" strokeOpacity={0.5} />
             <ReferenceLine y={0.50} stroke="#d97706" strokeDasharray="3 3" strokeOpacity={0.4} />
-            <Area dataKey="risk" stroke="#ba1a1a" fill="#ba1a1a" fillOpacity={0.1} strokeWidth={1.5} dot={{ r: 2, fill: "#ba1a1a" }} />
+            <Area dataKey="risk_score" name="risk" stroke="#ba1a1a" fill="#ba1a1a" fillOpacity={0.1} strokeWidth={1.5} dot={{ r: 2, fill: "#ba1a1a" }} />
             <Line dataKey="static" stroke="#245c45" strokeWidth={1} dot={false} strokeDasharray="4 2" />
             <Line dataKey="dynamic" stroke="#ea580c" strokeWidth={1} dot={false} />
           </AreaChart>

@@ -163,6 +163,28 @@ EVENTS = [
 ]
 
 
+ROAD_SEGMENTS = [
+    ("Z1", "Z3", "Shillong-Sohra Road", "district", 52, "OPEN", None, 25.31, 91.80),
+    ("Z1", "Z2", "Sohra-Mawsynram Link", "village", 18, "BLOCKED", "landslide", 25.30, 91.64),
+    ("Z3", "Z7", "Shillong-Jowai Highway", "national", 64, "OPEN", None, 25.53, 92.05),
+    ("Z4", "Z3", "Nongstoin-Shillong Road", "state", 85, "DAMAGED", "slope_failure", 25.57, 91.58),
+    ("Z5", "Z8", "Tura-Baghmara Road", "state", 72, "UNDER_REPAIR", "flood", 25.45, 90.42),
+    ("Z5", "Z6", "Tura-Williamnagar NH", "national", 95, "OPEN", None, 25.55, 90.33),
+    ("Z7", "Z1", "Jowai-Sohra Alternative", "district", 48, "BLOCKED", "landslide", 25.38, 91.95),
+    ("Z6", "Z8", "Williamnagar-Baghmara", "district", 38, "OPEN", None, 25.50, 90.55),
+]
+
+EMERGENCY_TASKS = [
+    ("Z1", "road_clear", "Clear Sohra-Mawsynram Link", "Landslide blocking main access road to Mawsynram village", "CRITICAL", "IN_PROGRESS", "NDRF Team Alpha", "4 hours"),
+    ("Z2", "evacuation", "Evacuate Mawsynram Low-Lying Areas", "Rising water levels threatening 3 hamlets near drainage basin", "CRITICAL", "PENDING", "SDRF Team B", "2 hours"),
+    ("Z4", "road_clear", "Repair Nongstoin-Shillong Road Section", "Slope failure at km 42 blocking state highway", "HIGH", "IN_PROGRESS", "PWD Road Division", "12 hours"),
+    ("Z5", "patrol", "Patrol Tura Hills Vulnerable Slopes", "Monitor cracking pattern reported by village council", "HIGH", "PENDING", "GEO Team Tura", "6 hours"),
+    ("Z7", "supply", "Emergency Supply Drop to Jowai Plateau", "Village isolated due to road blockage — food and medicine needed", "HIGH", "PENDING", "District Admin Jaintia", "8 hours"),
+    ("Z3", "shelter_setup", "Open Shillong North Relief Camp", "Pre-emptive shelter activation for degraded slope zone residents", "MEDIUM", "COMPLETED", "DDMA Shillong", "—"),
+    ("Z8", "patrol", "Monitor Baghmara Foothill Drainage", "Check drainage capacity after overnight rainfall", "LOW", "PENDING", "Block Office Baghmara", "3 hours"),
+    ("Z6", "supply", "Restock Williamnagar Medical Supplies", "Ensure health center is stocked before forecasted heavy rain", "LOW", "COMPLETED", "District Health Office", "—"),
+]
+
 RECIPIENTS = [
     (
         "+91-98xxx-DEMO1",
@@ -201,6 +223,8 @@ def seed(db):
         LandslideEvent,
         Recipient,
         AuditLog,
+        RoadSegment,
+        EmergencyTask,
     )
 
     from .ml.rf_model import (
@@ -263,6 +287,45 @@ def seed(db):
                     zone_id=zone_id,
                     name=name,
                     active=True,
+                )
+            )
+
+        # -----------------------------------------------------
+        # Road segments
+        # -----------------------------------------------------
+
+        for from_z, to_z, name, rtype, length, status, reason, lat, lng in ROAD_SEGMENTS:
+
+            db.add(
+                RoadSegment(
+                    from_zone=from_z,
+                    to_zone=to_z,
+                    name=name,
+                    road_type=rtype,
+                    length_km=length,
+                    status=status,
+                    blockage_reason=reason,
+                    latitude=lat,
+                    longitude=lng,
+                )
+            )
+
+        # -----------------------------------------------------
+        # Emergency tasks
+        # -----------------------------------------------------
+
+        for zone_id, ttype, title, desc, priority, status, team, eta in EMERGENCY_TASKS:
+
+            db.add(
+                EmergencyTask(
+                    zone_id=zone_id,
+                    task_type=ttype,
+                    title=title,
+                    description=desc,
+                    priority=priority,
+                    status=status,
+                    assigned_team=team,
+                    estimated_time=eta,
                 )
             )
 

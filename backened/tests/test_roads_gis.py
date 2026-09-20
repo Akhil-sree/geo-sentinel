@@ -4,9 +4,16 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 ROADS_GEOJSON = Path(__file__).resolve().parent.parent / "data" / "processed" / "roads.geojson"
+
+pytestmark = pytest.mark.skipif(
+    not ROADS_GEOJSON.exists(),
+    reason="roads.geojson absent (local-only data/processed/ — run scripts/extract_roads.py)",
+)
 
 
 def test_roads_geojson_exists():

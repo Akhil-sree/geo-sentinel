@@ -5,6 +5,8 @@ LIVE DATA UNAVAILABLE must never become live data = random numbers.
 import os
 import sys
 
+import pytest
+
 
 def _resp(status=200, payload=None, text=""):
     class R:
@@ -174,6 +176,10 @@ def test_corrupt_rf_artifact_falls_back(tmp_path):
 
 # ---------- real-data pipelines: DEM derive + temporal gate ----------
 
+@pytest.mark.skipif(
+    not os.path.exists("data/raw/dem_Z1.json"),
+    reason="SRTM dem_Z*.json caches absent (local-only data/raw/)",
+)
 def test_dem_derive_sane():
     import glob as _glob
     import importlib.util

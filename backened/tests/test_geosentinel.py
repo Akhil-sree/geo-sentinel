@@ -27,8 +27,15 @@ from gs_common import (  # noqa: E402
     validate_rf_rows,
 )
 
-with open(RF_CSV, encoding="utf-8") as _rf_fh:
-    RF_ROWS = list(csv.DictReader(_rf_fh))
+RF_ROWS = []
+if os.path.exists(RF_CSV):
+    with open(RF_CSV, encoding="utf-8") as _rf_fh:
+        RF_ROWS = list(csv.DictReader(_rf_fh))
+
+pytestmark = pytest.mark.skipif(
+    not RF_ROWS,
+    reason="training-package data absent (local-only datasets/)",
+)
 
 
 def test_event_id_normalization():

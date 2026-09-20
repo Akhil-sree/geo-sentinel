@@ -14,12 +14,19 @@ import glob
 import json
 import os
 
+import pytest
+
 DATA = os.path.join(os.path.dirname(__file__), "..", "data")
 RAW = os.path.join(DATA, "raw")
 PROCESSED = os.path.join(DATA, "processed")
 META = os.path.join(DATA, "metadata")
 CSV = os.path.join(PROCESSED, "ner_training_ner_v1.csv")
 NEED = os.path.exists(CSV)
+
+pytestmark = pytest.mark.skipif(
+    not NEED,
+    reason="ner_v1 training data absent (local-only data/processed/)",
+)
 
 
 def _rows():

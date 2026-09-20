@@ -37,7 +37,7 @@ python worker.py
 cd frontend && npm i && npm run dev
 ```
 
-Docker: `docker compose up --build` (backend + **worker** + frontend + healthchecks). Compose shares one sqlite file between backend and worker via the `sqlite_data:/data` volume (`DATABASE_URL=sqlite:////data/geo_sentinel.db`); local relative sqlite URLs resolve against `backened/` independent of CWD. Terrain/training sources mount read-only at `/datasets` (without it gs endpoints honestly return 503). Prod runtime VERIFIED 2026-09-15: `--profile prod` + Postgres DATABASE_URL override → PostgreSQL 16.4 + PostGIS 3.4, migrate v1–v8, full E2E + outage recovery (see `docs/POSTGRES_POSTGIS.md`). Compose runtime VERIFIED 2026-09-18 (build + healthy up + 27/27 API checks + restart/down-up recovery + browser E2E PASS + Postgres prod-profile runtime) — see `reports/FINAL_RUNTIME_VERIFICATION.md`.
+Docker: `docker compose up --build` (backend + **worker** + frontend + healthchecks). Compose shares one sqlite file between backend and worker via the `sqlite_data:/data` volume (`DATABASE_URL=sqlite:////data/geo_sentinel.db`); local relative sqlite URLs resolve against `backened/` independent of CWD. Terrain/training sources mount read-only at `/datasets` (without it gs endpoints honestly return 503). Prod runtime VERIFIED 2026-09-15: `--profile prod` + Postgres DATABASE_URL override → PostgreSQL 16.4 + PostGIS 3.4, migrate v1–v9, full E2E + outage recovery (see `docs/POSTGRES_POSTGIS.md`). Compose runtime VERIFIED 2026-09-18 (build + healthy up + 27/27 API checks + restart/down-up recovery + browser E2E PASS + Postgres prod-profile runtime v1–v9) — see `reports/FINAL_RUNTIME_VERIFICATION.md`.
 
 ## Live rainfall (optional, unverified)
 
@@ -94,7 +94,7 @@ for the current number; includes `tests/test_sih_chain.py`,
 `test_training_leakage.py`, `test_ner_pipeline.py`, routing-safety,
 error-contract, RF-validation, media-security, rate-limit, observability
 regressions, plus `test_hardening.py` and `test_db_shared_persistence.py`) · regression gate: `python scripts/final_verify.py` (20 checks, 0 FAIL; postgis check probes a live compose postgres when present) · temporal gates: `validate_temporal_dataset.py [--v2]` · Mamba: `train_mamba_real [--v2]`, `cv_mamba`, `benchmark_real` · DEM: `fetch_dem.py` + `fetch_demgrid.py` · sat: `fetch_satmeta.py` · hard negs: `fetch_temporal.py --fetch-hard`, build `--build --v2` · live: `LIVE_NET_TEST=1 pytest tests/test_pipeline.py::test_live_openmeteo_ingestion_verified` · dataset gate: `python scripts/validate_dataset.py` · dataset build: `python data/process_events.py` · Mamba train: `python -m app.ml.train_mamba` · retraining gate: `python scripts/promote_reports.py --list` · `cd frontend && npm test -- --run` (run for the current count; covers gs
-null-state, formatter, rescue, XSS popup, backend-status, basemap utils) · `npx tsc --noEmit` clean · `npm run build` ok. Docker compose runtime unverified here (daemon down); backend Dockerfile runs `scripts/migrate.py` (versioned v1–v8) on boot. Fusion weights: single source `backened/risk_thresholds.yaml` (compose sets no overrides).
+null-state, formatter, rescue, XSS popup, backend-status, basemap utils) · `npx tsc --noEmit` clean · `npm run build` ok. Docker compose runtime VERIFIED 2026-09-18 (build + healthy up + 27/27 API checks + restart recovery + Postgres prod v1–v9, see `reports/FINAL_RUNTIME_VERIFICATION.md`); backend Dockerfile runs `scripts/migrate.py` (versioned v1–v9) on boot. Fusion weights: single source `backened/risk_thresholds.yaml` (compose sets no overrides).
 
 ## Demo script (deterministic, ~5 min)
 
@@ -104,4 +104,4 @@ null-state, formatter, rescue, XSS popup, backend-status, basemap utils) · `npx
 
 Live IMD/SMAP keys, real Sentinel imagery ingestion, full-raster DEM/curvature pipeline, larger curated landslide inventory
 with spatial train/val/test + calibrated probabilities, trained temporal checkpoint passing promotion
-gates, live SMS/push delivery runs, full PWA with offline maps, verified Postgres/PostGIS runtime + S3, JWT roles, CI. (Redis is explicitly out of scope — in-memory rate limiting by design.)
+gates, live SMS/push delivery runs, full PWA with offline maps, S3/TLS, JWT roles, CI. Postgres/PostGIS runtime VERIFIED 2026-09-18 (`--profile prod`, migrate v1–v9, see `reports/FINAL_RUNTIME_VERIFICATION.md`); rate limiting is Redis-optional (in-memory default, `REDIS_URL` enables shared Redis INCR/EXPIRE store via `backened/app/auth.py` + compose `redis` service, see `docs/audits/FINAL_AUDIT_REPORT.md`).

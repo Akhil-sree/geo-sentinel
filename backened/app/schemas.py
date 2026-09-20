@@ -1,5 +1,5 @@
 """Pydantic response/request schemas — the contract the frontend types/ folder mirrors."""
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Literal
 
 Severity = Literal["LOW", "MODERATE", "HIGH", "VERY_HIGH"]
@@ -17,6 +17,7 @@ class ModelVersions(BaseModel):
 
 
 class ZoneRisk(BaseModel):
+    model_config = {"protected_namespaces": ()}
     zone_id: str
     name: str
     district: str
@@ -60,14 +61,16 @@ class ZoneOut(BaseModel):
 
 
 class ReportIn(BaseModel):
-    id: str | None = None
-    latitude: float
-    longitude: float
-    accuracy: str | None = None
-    landslide_type: str | None = None
-    severity_observed: str | None = None
-    description: str | None = None
-    client_timestamp: str | None = None
+    id: str | None = Field(default=None, max_length=64)
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    # P2: typed as float so non-numeric input is a 422, not a server-side 500
+    # from float(str) in the handler.
+    accuracy: float | None = Field(default=None, ge=0, le=100000)
+    landslide_type: str | None = Field(default=None, max_length=64)
+    severity_observed: str | None = Field(default=None, max_length=32)
+    description: str | None = Field(default=None, max_length=2000)
+    client_timestamp: str | None = Field(default=None, max_length=64)
 
 
 class ReportOut(BaseModel):
@@ -92,6 +95,12 @@ class AlertOut(BaseModel):
     to: str
     recipient_name: str
     at: str
+
+
+class SendAlertIn(BaseModel):
+    zone_id: str
+    severity: str
+    lang: str = "en"
 
 
 class SendResult(BaseModel):

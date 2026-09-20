@@ -1,0 +1,21 @@
+{
+  "features": [
+    "Elevation_m",
+    "Slope_deg",
+    "Aspect_deg",
+    "Curvature",
+    "TPI_m",
+    "Roughness_m",
+    "LULC_Class",
+    "Distance_to_Nearest_Road_m",
+    "Distance_to_Major_Road_m",
+    "Distance_to_Tertiary_or_Higher_Road_m",
+    "Road_Length_1km_m",
+    "Distance_to_Nearest_Waterway_m",
+    "Distance_to_Major_Waterway_m",
+    "Waterway_Length_1km_m"
+  ],
+  "n_features": 14,
+  "label_coding": "1=COOLR event point; 0=pseudo-background (NOT confirmed absence)",
+  "feature_order_fixed": true
+}

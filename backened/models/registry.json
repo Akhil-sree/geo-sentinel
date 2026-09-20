@@ -1,0 +1,2521 @@
+{
+  "models": [
+    {
+      "model_id": "fusion_stacking",
+      "version": "stack_v1",
+      "training_dataset": "events_v2",
+      "dataset_version": "events_v2",
+      "dataset_size": 24,
+      "feature_schema": [
+        "oof_logreg",
+        "oof_rf",
+        "oof_gbm"
+      ],
+      "feature_version": "terrain6_v1",
+      "training_timestamp": "2026-09-14T19:52:56.882493+00:00",
+      "validation_strategy": "spatial GroupKFold-3 by district",
+      "validation_method": "spatial GroupKFold-3 by district",
+      "algorithm": "LogisticRegression-on-OOF",
+      "parameters": {},
+      "metrics": {
+        "kind": "LEARNED fusion (OOF stacking)",
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "roc_auc": 0.3929,
+        "pr_auc": 0.4262,
+        "brier": 0.2578,
+        "meta_weights": [
+          0.259,
+          0.164,
+          -0.034
+        ],
+        "n_samples": 24
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "DEMO",
+      "random_seed": 42,
+      "artifact_hash": null,
+      "promotion_status": "NOT_EVALUATED",
+      "status": "DEMO"
+    },
+    {
+      "model_id": "mamba_temporal",
+      "version": "mamba_2026_04",
+      "training_dataset": "seq_real_v2",
+      "dataset_version": "seq_real_v2",
+      "dataset_size": 32,
+      "feature_schema": [
+        "rain1h",
+        "rain24h",
+        "rain72h",
+        "rain_slope",
+        "soil",
+        "soil_change",
+        "sar_neutral"
+      ],
+      "feature_version": "seq48x7_v1",
+      "training_timestamp": "2026-09-14T20:34:09.025750+00:00",
+      "validation_strategy": "spatial holdout by zone (train 6 / val 2)",
+      "validation_method": "spatial holdout by zone (train 6 / val 2)",
+      "algorithm": "SelectiveSSMCell",
+      "parameters": {
+        "lr": 0.001,
+        "epochs": 40,
+        "patience": 6
+      },
+      "metrics": {
+        "accuracy": 0.375,
+        "precision": 0.2857,
+        "recall": 1.0,
+        "f1": 0.4444,
+        "roc_auc": 0.6667,
+        "pr_auc": 0.45,
+        "brier": 0.2533,
+        "ece": 0.2591,
+        "reliability_bins": [
+          {
+            "bin": [
+              0.0,
+              0.2
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "n": 8,
+            "accuracy": 0.25,
+            "confidence": 0.5091
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.8,
+              1.0
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          }
+        ],
+        "calibration": "uncalibrated \u2014 n=6 holdout insufficient for Platt/isotonic; use model_score, not probability",
+        "confusion_matrix": [
+          [
+            1,
+            5
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        "n_train": 24,
+        "n_val": 8,
+        "n_samples": 32,
+        "data_source": "REAL ERA5 archive sequences (rain observed blend, soil MODELED), pre-event only",
+        "leakage_check_passed": true
+      },
+      "calibration_status": "uncalibrated (n insufficient)",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": "sha256:788060f577f454b0",
+      "promotion_status": "BLOCKED: n=32 < minimum_samples=50; F1=0.4444 < 0.6; Brier=0.2533 > 0.25; validation 'spatial holdout by zone (train 6 / val 2)' != required 'spatial GroupKFold'",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "mamba_temporal",
+      "version": "mamba_2026_03",
+      "training_dataset": "seq_real_v1",
+      "dataset_version": "seq_real_v1",
+      "dataset_size": 24,
+      "feature_schema": [
+        "rain1h",
+        "rain24h",
+        "rain72h",
+        "rain_slope",
+        "soil",
+        "soil_change",
+        "sar_neutral"
+      ],
+      "feature_version": "seq48x7_v1",
+      "training_timestamp": "2026-09-14T20:34:15.876334+00:00",
+      "validation_strategy": "spatial holdout by zone (train 6 / val 2)",
+      "validation_method": "spatial holdout by zone (train 6 / val 2)",
+      "algorithm": "SelectiveSSMCell",
+      "parameters": {
+        "lr": 0.001,
+        "epochs": 40,
+        "patience": 6
+      },
+      "metrics": {
+        "accuracy": 0.3333,
+        "precision": 0.3333,
+        "recall": 1.0,
+        "f1": 0.5,
+        "roc_auc": 0.5,
+        "pr_auc": 0.45,
+        "brier": 0.256,
+        "ece": 0.1878,
+        "reliability_bins": [
+          {
+            "bin": [
+              0.0,
+              0.2
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "n": 6,
+            "accuracy": 0.3333,
+            "confidence": 0.5211
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.8,
+              1.0
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          }
+        ],
+        "calibration": "uncalibrated \u2014 n=6 holdout insufficient for Platt/isotonic; use model_score, not probability",
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        "n_train": 18,
+        "n_val": 6,
+        "n_samples": 24,
+        "data_source": "REAL ERA5 archive sequences (rain observed blend, soil MODELED), pre-event only",
+        "leakage_check_passed": true
+      },
+      "calibration_status": "uncalibrated (n insufficient)",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": "sha256:217434d623923e28",
+      "promotion_status": "BLOCKED: n=24 < minimum_samples=50; F1=0.5 < 0.6; Brier=0.256 > 0.25; validation 'spatial holdout by zone (train 6 / val 2)' != required 'spatial GroupKFold'",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "mamba_cv",
+      "version": "cv_v1",
+      "training_dataset": "seq_real_v2",
+      "dataset_version": "seq_real_v2",
+      "dataset_size": 32,
+      "feature_schema": null,
+      "feature_version": "seq48x7_v1",
+      "training_timestamp": "2026-09-14T21:12:07.360582+00:00",
+      "validation_strategy": "spatial GroupKFold-3 by district + inner district holdout",
+      "validation_method": "spatial GroupKFold-3 by district + inner district holdout",
+      "algorithm": "SelectiveSSMCell",
+      "parameters": {
+        "variants": [
+          "plain",
+          "weighted",
+          "focal"
+        ],
+        "epochs": 40,
+        "patience": 6
+      },
+      "metrics": {
+        "summary": {
+          "plain": {
+            "folds": [
+              {
+                "f1": 0.6667,
+                "recall": 1.0,
+                "pr_auc": 0.885,
+                "brier": 0.2464
+              },
+              {
+                "f1": 0.4,
+                "recall": 1.0,
+                "pr_auc": 0.3409,
+                "brier": 0.254
+              },
+              {
+                "f1": 0.4,
+                "recall": 1.0,
+                "pr_auc": 0.45,
+                "brier": 0.2536
+              }
+            ],
+            "f1_mean": 0.4889,
+            "f1_std": 0.1257,
+            "pr_auc_mean": 0.5586,
+            "brier_mean": 0.2513
+          },
+          "weighted": {
+            "folds": [
+              {
+                "f1": 0.6667,
+                "recall": 1.0,
+                "pr_auc": 0.885,
+                "brier": 0.2468
+              },
+              {
+                "f1": 0.4,
+                "recall": 1.0,
+                "pr_auc": 0.3619,
+                "brier": 0.2873
+              },
+              {
+                "f1": 0.4,
+                "recall": 1.0,
+                "pr_auc": 0.45,
+                "brier": 0.2571
+              }
+            ],
+            "f1_mean": 0.4889,
+            "f1_std": 0.1257,
+            "pr_auc_mean": 0.5656,
+            "brier_mean": 0.2637
+          },
+          "focal": {
+            "folds": [
+              {
+                "f1": 0.6667,
+                "recall": 1.0,
+                "pr_auc": 0.885,
+                "brier": 0.247
+              },
+              {
+                "f1": 0.4,
+                "recall": 1.0,
+                "pr_auc": 0.3333,
+                "brier": 0.2551
+              },
+              {
+                "f1": 0.4,
+                "recall": 1.0,
+                "pr_auc": 0.5,
+                "brier": 0.2553
+              }
+            ],
+            "f1_mean": 0.4889,
+            "f1_std": 0.1257,
+            "pr_auc_mean": 0.5728,
+            "brier_mean": 0.2525
+          }
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "test_districts": [
+              "East Khasi Hills"
+            ],
+            "n_test": 12,
+            "pos": 5,
+            "neg": 7,
+            "flag": "ok",
+            "inner_val_district": "East Garo Hills"
+          },
+          {
+            "fold": 1,
+            "test_districts": [
+              "East Garo Hills",
+              "West Garo Hills",
+              "West Khasi Hills"
+            ],
+            "n_test": 12,
+            "pos": 3,
+            "neg": 9,
+            "flag": "ok",
+            "inner_val_district": "East Khasi Hills"
+          },
+          {
+            "fold": 2,
+            "test_districts": [
+              "South Garo Hills",
+              "West Jaintia Hills"
+            ],
+            "n_test": 8,
+            "pos": 2,
+            "neg": 6,
+            "flag": "ok",
+            "inner_val_district": "East Garo Hills"
+          }
+        ],
+        "n_samples": 32,
+        "leakage_check_passed": true
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": null,
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "mamba_experiments",
+      "version": "grid_v1",
+      "training_dataset": "seq_real_v2",
+      "dataset_version": "seq_real_v2",
+      "dataset_size": 32,
+      "feature_schema": null,
+      "feature_version": "seqNx7_v1",
+      "training_timestamp": "2026-09-14T21:13:52.373909+00:00",
+      "validation_strategy": "spatial GroupKFold-3 by district + inner holdout",
+      "validation_method": "spatial GroupKFold-3 by district + inner holdout",
+      "algorithm": "SelectiveSSMCell",
+      "parameters": {
+        "configs": [
+          [
+            48,
+            8
+          ],
+          [
+            24,
+            8
+          ],
+          [
+            48,
+            16
+          ]
+        ],
+        "epochs": 40,
+        "patience": 6,
+        "seed": 42
+      },
+      "metrics": {
+        "results": [
+          {
+            "seq_len": 48,
+            "d_state": 8,
+            "f1": [
+              0.6667,
+              0.4,
+              0.4
+            ],
+            "f1_mean": 0.4889,
+            "f1_std": 0.1257,
+            "pr_auc_mean": 0.5586,
+            "brier_mean": 0.2513
+          },
+          {
+            "seq_len": 24,
+            "d_state": 8,
+            "f1": [
+              0.6667,
+              0.4,
+              0.4
+            ],
+            "f1_mean": 0.4889,
+            "f1_std": 0.1257,
+            "pr_auc_mean": 0.5586,
+            "brier_mean": 0.2513
+          },
+          {
+            "seq_len": 48,
+            "d_state": 16,
+            "f1": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "f1_mean": 0.0,
+            "f1_std": 0.0,
+            "pr_auc_mean": 0.3662,
+            "brier_mean": 0.2283
+          }
+        ],
+        "n_samples": 32,
+        "leakage_check_passed": true
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": null,
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "mamba_lzo",
+      "version": "lzo_v1",
+      "training_dataset": "seq_real_v2",
+      "dataset_version": "seq_real_v2",
+      "dataset_size": 32,
+      "feature_schema": null,
+      "feature_version": "seq48x7_v1",
+      "training_timestamp": "2026-09-14T21:15:06.092537+00:00",
+      "validation_strategy": "leave-zone-out (8 folds)",
+      "validation_method": "leave-zone-out (8 folds)",
+      "algorithm": "SelectiveSSMCell",
+      "parameters": {
+        "epochs": 40,
+        "patience": 6
+      },
+      "metrics": {
+        "per_zone": [
+          {
+            "zone": "Z1",
+            "n": 4,
+            "pos": 2,
+            "recall": 1.0,
+            "f1": 0.8,
+            "pr_auc": 1.0,
+            "brier": 0.2424
+          },
+          {
+            "zone": "Z2",
+            "n": 4,
+            "pos": 1,
+            "recall": 1.0,
+            "f1": 0.5,
+            "pr_auc": 1.0,
+            "brier": 0.2463
+          },
+          {
+            "zone": "Z3",
+            "n": 4,
+            "pos": 2,
+            "recall": 1.0,
+            "f1": 0.6667,
+            "pr_auc": 0.5,
+            "brier": 0.2509
+          },
+          {
+            "zone": "Z4",
+            "n": 4,
+            "pos": 1,
+            "recall": 1.0,
+            "f1": 0.4,
+            "pr_auc": 0.5,
+            "brier": 0.2518
+          },
+          {
+            "zone": "Z5",
+            "n": 4,
+            "pos": 2,
+            "recall": 1.0,
+            "f1": 0.6667,
+            "pr_auc": 0.5,
+            "brier": 0.2507
+          },
+          {
+            "zone": "Z6",
+            "n": 4,
+            "pos": 0,
+            "f1": null,
+            "note": "no positives \u2014 all-negative prediction is correct"
+          },
+          {
+            "zone": "Z7",
+            "n": 4,
+            "pos": 1,
+            "recall": 1.0,
+            "f1": 0.4,
+            "pr_auc": 0.5,
+            "brier": 0.2532
+          },
+          {
+            "zone": "Z8",
+            "n": 4,
+            "pos": 1,
+            "recall": 1.0,
+            "f1": 0.4,
+            "pr_auc": 0.5,
+            "brier": 0.2538
+          }
+        ],
+        "f1_mean_scored": 0.5476,
+        "n_samples": 32,
+        "leakage_check_passed": true
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": null,
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "logreg_v3",
+      "version": "event_logreg_v3_v1",
+      "training_dataset": "events_v3",
+      "dataset_version": "events_v3",
+      "dataset_size": 24,
+      "feature_schema": [
+        "slope",
+        "elevation_norm",
+        "ruggedness",
+        "road_proximity",
+        "drainage_proximity",
+        "settlement_density",
+        "gsi_count_norm",
+        "gsi_dist_norm"
+      ],
+      "feature_version": "terrain8_gsi_v1",
+      "training_timestamp": "2026-09-14T21:19:07.557210+00:00",
+      "validation_strategy": "spatial GroupKFold-3 by district",
+      "validation_method": "spatial GroupKFold-3 by district",
+      "algorithm": "LogisticRegression",
+      "parameters": {
+        "C": 1.0,
+        "class_weight": "balanced",
+        "dual": false,
+        "fit_intercept": true,
+        "intercept_scaling": 1,
+        "l1_ratio": null,
+        "max_iter": 2000,
+        "multi_class": "deprecated",
+        "n_jobs": null,
+        "penalty": "l2",
+        "random_state": null,
+        "solver": "lbfgs",
+        "tol": 0.0001,
+        "verbose": 0,
+        "warm_start": false
+      },
+      "metrics": {
+        "accuracy": 0.5833,
+        "precision": 0.5,
+        "recall": 0.3,
+        "f1": 0.375,
+        "f1_macro": 0.5312,
+        "f1_weighted": 0.5573,
+        "roc_auc": 0.5643,
+        "pr_auc": 0.5018,
+        "brier": 0.2758,
+        "brier_calibrated": 0.2471,
+        "ece": 0.2037,
+        "calibration": "sigmoid (Brier 0.247)",
+        "reliability_bins": [
+          {
+            "bin": [
+              0.0,
+              0.2
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "n": 6,
+            "accuracy": 0.5,
+            "confidence": 0.2812
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "n": 15,
+            "accuracy": 0.3333,
+            "confidence": 0.4899
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "n": 3,
+            "accuracy": 0.6667,
+            "confidence": 0.6578
+          },
+          {
+            "bin": [
+              0.8,
+              1.0
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          }
+        ],
+        "confusion_matrix": [
+          [
+            11,
+            3
+          ],
+          [
+            7,
+            3
+          ]
+        ],
+        "leakage_check_passed": true,
+        "n_samples": 24,
+        "n_positive": 10
+      },
+      "calibration_status": "sigmoid (Brier 0.247)",
+      "model_status": "DEMO",
+      "random_seed": 42,
+      "artifact_hash": "sha256:2c5e6a5a180484b0",
+      "promotion_status": "BLOCKED: n=24 < minimum_samples=50; F1=0.375 < 0.6; recall=0.3 < 0.6; Brier=0.2758 > 0.25",
+      "status": "DEMO"
+    },
+    {
+      "model_id": "rf_event_v3",
+      "version": "event_rf_event_v3_v1",
+      "training_dataset": "events_v3",
+      "dataset_version": "events_v3",
+      "dataset_size": 24,
+      "feature_schema": [
+        "slope",
+        "elevation_norm",
+        "ruggedness",
+        "road_proximity",
+        "drainage_proximity",
+        "settlement_density",
+        "gsi_count_norm",
+        "gsi_dist_norm"
+      ],
+      "feature_version": "terrain8_gsi_v1",
+      "training_timestamp": "2026-09-14T21:19:11.857066+00:00",
+      "validation_strategy": "spatial GroupKFold-3 by district",
+      "validation_method": "spatial GroupKFold-3 by district",
+      "algorithm": "RandomForestClassifier",
+      "parameters": {
+        "bootstrap": true,
+        "ccp_alpha": 0.0,
+        "class_weight": "balanced",
+        "criterion": "gini",
+        "max_depth": 6,
+        "max_features": "sqrt",
+        "max_leaf_nodes": null,
+        "max_samples": null,
+        "min_impurity_decrease": 0.0,
+        "min_samples_leaf": 2,
+        "min_samples_split": 2,
+        "min_weight_fraction_leaf": 0.0,
+        "monotonic_cst": null,
+        "n_estimators": 300,
+        "n_jobs": -1,
+        "oob_score": false,
+        "random_state": 42,
+        "verbose": 0,
+        "warm_start": false
+      },
+      "metrics": {
+        "accuracy": 0.5833,
+        "precision": 0.5,
+        "recall": 0.3,
+        "f1": 0.375,
+        "f1_macro": 0.5312,
+        "f1_weighted": 0.5573,
+        "roc_auc": 0.6071,
+        "pr_auc": 0.4901,
+        "brier": 0.2355,
+        "brier_calibrated": 0.2355,
+        "ece": 0.0249,
+        "calibration": "uncalibrated \u2014 use model_score, not probability",
+        "reliability_bins": [
+          {
+            "bin": [
+              0.0,
+              0.2
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "n": 9,
+            "accuracy": 0.3333,
+            "confidence": 0.3485
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "n": 15,
+            "accuracy": 0.4667,
+            "confidence": 0.4974
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.8,
+              1.0
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          }
+        ],
+        "confusion_matrix": [
+          [
+            11,
+            3
+          ],
+          [
+            7,
+            3
+          ]
+        ],
+        "leakage_check_passed": true,
+        "n_samples": 24,
+        "n_positive": 10
+      },
+      "calibration_status": "uncalibrated \u2014 use model_score, not probability",
+      "model_status": "DEMO",
+      "random_seed": 42,
+      "artifact_hash": "sha256:9b12336df30d52be",
+      "promotion_status": "BLOCKED: n=24 < minimum_samples=50; F1=0.375 < 0.6; recall=0.3 < 0.6",
+      "status": "DEMO"
+    },
+    {
+      "model_id": "gbm_event_v3",
+      "version": "event_gbm_event_v3_v1",
+      "training_dataset": "events_v3",
+      "dataset_version": "events_v3",
+      "dataset_size": 24,
+      "feature_schema": [
+        "slope",
+        "elevation_norm",
+        "ruggedness",
+        "road_proximity",
+        "drainage_proximity",
+        "settlement_density",
+        "gsi_count_norm",
+        "gsi_dist_norm"
+      ],
+      "feature_version": "terrain8_gsi_v1",
+      "training_timestamp": "2026-09-14T21:19:12.363471+00:00",
+      "validation_strategy": "spatial GroupKFold-3 by district",
+      "validation_method": "spatial GroupKFold-3 by district",
+      "algorithm": "GradientBoostingClassifier",
+      "parameters": {
+        "ccp_alpha": 0.0,
+        "criterion": "friedman_mse",
+        "init": null,
+        "learning_rate": 0.1,
+        "loss": "log_loss",
+        "max_depth": 2,
+        "max_features": null,
+        "max_leaf_nodes": null,
+        "min_impurity_decrease": 0.0,
+        "min_samples_leaf": 1,
+        "min_samples_split": 2,
+        "min_weight_fraction_leaf": 0.0,
+        "n_estimators": 100,
+        "n_iter_no_change": null,
+        "random_state": 42,
+        "subsample": 1.0,
+        "tol": 0.0001,
+        "validation_fraction": 0.1,
+        "verbose": 0,
+        "warm_start": false
+      },
+      "metrics": {
+        "accuracy": 0.5833,
+        "precision": 0.5,
+        "recall": 0.3,
+        "f1": 0.375,
+        "f1_macro": 0.5312,
+        "f1_weighted": 0.5573,
+        "roc_auc": 0.5429,
+        "pr_auc": 0.5007,
+        "brier": 0.2827,
+        "brier_calibrated": 0.2635,
+        "ece": 0.162,
+        "calibration": "sigmoid (Brier 0.264)",
+        "reliability_bins": [
+          {
+            "bin": [
+              0.0,
+              0.2
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "n": 9,
+            "accuracy": 0.5556,
+            "confidence": 0.3844
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "n": 15,
+            "accuracy": 0.3333,
+            "confidence": 0.4622
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.8,
+              1.0
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          }
+        ],
+        "confusion_matrix": [
+          [
+            11,
+            3
+          ],
+          [
+            7,
+            3
+          ]
+        ],
+        "leakage_check_passed": true,
+        "n_samples": 24,
+        "n_positive": 10
+      },
+      "calibration_status": "sigmoid (Brier 0.264)",
+      "model_status": "DEMO",
+      "random_seed": 42,
+      "artifact_hash": "sha256:dcdd7f4df7d42160",
+      "promotion_status": "BLOCKED: n=24 < minimum_samples=50; F1=0.375 < 0.6; recall=0.3 < 0.6; Brier=0.2827 > 0.25",
+      "status": "DEMO"
+    },
+    {
+      "model_id": "ner_logreg",
+      "version": "ner_v1_v1",
+      "training_dataset": "ner_v1",
+      "dataset_version": "ner_v1",
+      "dataset_size": 30,
+      "feature_schema": [
+        "rain_1h",
+        "rain_3h",
+        "rain_6h",
+        "rain_12h",
+        "rain_24h",
+        "rain_48h",
+        "rain_72h",
+        "rain_7d",
+        "rain_14d",
+        "rain_30d",
+        "rain_max_1h",
+        "rain_max_3h",
+        "rain_max_24h",
+        "rain_intensity",
+        "rain_trend",
+        "antecedent_7d",
+        "elevation_mean",
+        "elevation_min",
+        "elevation_max",
+        "elevation_range",
+        "slope_mean",
+        "slope_max",
+        "slope_var",
+        "ruggedness",
+        "road_dist_km",
+        "village_dist_km",
+        "infra_dist_km"
+      ],
+      "feature_version": "nerfeat_v1",
+      "training_timestamp": "2026-09-15T11:47:39.938281+00:00",
+      "validation_strategy": "spatial GroupKFold + temporal holdout + leave-district-out (reported)",
+      "validation_method": "spatial GroupKFold + temporal holdout + leave-district-out (reported)",
+      "algorithm": "LogisticRegression",
+      "parameters": {
+        "seed": 42,
+        "class_weight": "balanced",
+        "features": [
+          "rain_1h",
+          "rain_3h",
+          "rain_6h",
+          "rain_12h",
+          "rain_24h",
+          "rain_48h",
+          "rain_72h",
+          "rain_7d",
+          "rain_14d",
+          "rain_30d",
+          "rain_max_1h",
+          "rain_max_3h",
+          "rain_max_24h",
+          "rain_intensity",
+          "rain_trend",
+          "antecedent_7d",
+          "elevation_mean",
+          "elevation_min",
+          "elevation_max",
+          "elevation_range",
+          "slope_mean",
+          "slope_max",
+          "slope_var",
+          "ruggedness",
+          "road_dist_km",
+          "village_dist_km",
+          "infra_dist_km"
+        ]
+      },
+      "metrics": {
+        "n_samples": 30,
+        "n_pos": 10,
+        "n_neg": 20,
+        "n_groups": 5,
+        "n_features": 27,
+        "cv_f1_mean": 0.2778,
+        "cv_f1_std": 0.2079,
+        "cv_recall_mean": 0.2444,
+        "holdout_n": 12,
+        "f1": 0.3333,
+        "recall": 0.25,
+        "precision": 0.5,
+        "pr_auc": 0.5405,
+        "roc_auc": 0.5625,
+        "brier": 0.318,
+        "confusion": [
+          [
+            7,
+            1
+          ],
+          [
+            3,
+            1
+          ]
+        ],
+        "leakage_check_passed": true,
+        "dropped_all_missing": [
+          "soil_moisture",
+          "soil_1d",
+          "soil_3d",
+          "soil_7d",
+          "sar_pre_days",
+          "sar_post_days",
+          "sar_same_orbit",
+          "hist_density_15km",
+          "nearest_spatial_km"
+        ],
+        "dropped_future_inventory": [
+          "hist_density_15km",
+          "nearest_spatial_km"
+        ],
+        "ldo_f1_mean": 0.2,
+        "ldo_per_district": {
+          "East Khasi Hills": 0.3333,
+          "South Garo Hills": 0.6667,
+          "West Garo Hills": 0.0,
+          "West Jaintia Hills": 0.0,
+          "West Khasi Hills": 0.0
+        },
+        "recall_ci95": [
+          0.046,
+          0.699
+        ],
+        "precision_ci95": [
+          0.095,
+          0.905
+        ],
+        "calibration_note": "uncalibrated (insufficient n for Platt/isotonic)"
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": "sha256:9274cdbd6527b93c",
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "ner_rf",
+      "version": "ner_v1_v1",
+      "training_dataset": "ner_v1",
+      "dataset_version": "ner_v1",
+      "dataset_size": 30,
+      "feature_schema": [
+        "rain_1h",
+        "rain_3h",
+        "rain_6h",
+        "rain_12h",
+        "rain_24h",
+        "rain_48h",
+        "rain_72h",
+        "rain_7d",
+        "rain_14d",
+        "rain_30d",
+        "rain_max_1h",
+        "rain_max_3h",
+        "rain_max_24h",
+        "rain_intensity",
+        "rain_trend",
+        "antecedent_7d",
+        "elevation_mean",
+        "elevation_min",
+        "elevation_max",
+        "elevation_range",
+        "slope_mean",
+        "slope_max",
+        "slope_var",
+        "ruggedness",
+        "road_dist_km",
+        "village_dist_km",
+        "infra_dist_km"
+      ],
+      "feature_version": "nerfeat_v1",
+      "training_timestamp": "2026-09-15T11:47:47.464576+00:00",
+      "validation_strategy": "spatial GroupKFold + temporal holdout + leave-district-out (reported)",
+      "validation_method": "spatial GroupKFold + temporal holdout + leave-district-out (reported)",
+      "algorithm": "RandomForestClassifier",
+      "parameters": {
+        "seed": 42,
+        "class_weight": "balanced",
+        "features": [
+          "rain_1h",
+          "rain_3h",
+          "rain_6h",
+          "rain_12h",
+          "rain_24h",
+          "rain_48h",
+          "rain_72h",
+          "rain_7d",
+          "rain_14d",
+          "rain_30d",
+          "rain_max_1h",
+          "rain_max_3h",
+          "rain_max_24h",
+          "rain_intensity",
+          "rain_trend",
+          "antecedent_7d",
+          "elevation_mean",
+          "elevation_min",
+          "elevation_max",
+          "elevation_range",
+          "slope_mean",
+          "slope_max",
+          "slope_var",
+          "ruggedness",
+          "road_dist_km",
+          "village_dist_km",
+          "infra_dist_km"
+        ]
+      },
+      "metrics": {
+        "n_samples": 30,
+        "n_pos": 10,
+        "n_neg": 20,
+        "n_groups": 5,
+        "n_features": 27,
+        "cv_f1_mean": 0.3667,
+        "cv_f1_std": 0.2625,
+        "cv_recall_mean": 0.3111,
+        "holdout_n": 12,
+        "f1": 0.4,
+        "recall": 0.25,
+        "precision": 1.0,
+        "pr_auc": 0.5597,
+        "roc_auc": 0.5625,
+        "brier": 0.2157,
+        "confusion": [
+          [
+            8,
+            0
+          ],
+          [
+            3,
+            1
+          ]
+        ],
+        "leakage_check_passed": true,
+        "dropped_all_missing": [
+          "soil_moisture",
+          "soil_1d",
+          "soil_3d",
+          "soil_7d",
+          "sar_pre_days",
+          "sar_post_days",
+          "sar_same_orbit",
+          "hist_density_15km",
+          "nearest_spatial_km"
+        ],
+        "dropped_future_inventory": [
+          "hist_density_15km",
+          "nearest_spatial_km"
+        ],
+        "ldo_f1_mean": 0.32,
+        "ldo_per_district": {
+          "East Khasi Hills": 0.6,
+          "South Garo Hills": 1.0,
+          "West Garo Hills": 0.0,
+          "West Jaintia Hills": 0.0,
+          "West Khasi Hills": 0.0
+        },
+        "recall_ci95": [
+          0.046,
+          0.699
+        ],
+        "precision_ci95": [
+          0.207,
+          1.0
+        ],
+        "calibration_note": "uncalibrated (insufficient n for Platt/isotonic)"
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": "sha256:bd10e0e33433093f",
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "ner_gbm",
+      "version": "ner_v1_v1",
+      "training_dataset": "ner_v1",
+      "dataset_version": "ner_v1",
+      "dataset_size": 30,
+      "feature_schema": [
+        "rain_1h",
+        "rain_3h",
+        "rain_6h",
+        "rain_12h",
+        "rain_24h",
+        "rain_48h",
+        "rain_72h",
+        "rain_7d",
+        "rain_14d",
+        "rain_30d",
+        "rain_max_1h",
+        "rain_max_3h",
+        "rain_max_24h",
+        "rain_intensity",
+        "rain_trend",
+        "antecedent_7d",
+        "elevation_mean",
+        "elevation_min",
+        "elevation_max",
+        "elevation_range",
+        "slope_mean",
+        "slope_max",
+        "slope_var",
+        "ruggedness",
+        "road_dist_km",
+        "village_dist_km",
+        "infra_dist_km"
+      ],
+      "feature_version": "nerfeat_v1",
+      "training_timestamp": "2026-09-15T11:47:48.857357+00:00",
+      "validation_strategy": "spatial GroupKFold + temporal holdout + leave-district-out (reported)",
+      "validation_method": "spatial GroupKFold + temporal holdout + leave-district-out (reported)",
+      "algorithm": "GradientBoostingClassifier",
+      "parameters": {
+        "seed": 42,
+        "class_weight": "balanced",
+        "features": [
+          "rain_1h",
+          "rain_3h",
+          "rain_6h",
+          "rain_12h",
+          "rain_24h",
+          "rain_48h",
+          "rain_72h",
+          "rain_7d",
+          "rain_14d",
+          "rain_30d",
+          "rain_max_1h",
+          "rain_max_3h",
+          "rain_max_24h",
+          "rain_intensity",
+          "rain_trend",
+          "antecedent_7d",
+          "elevation_mean",
+          "elevation_min",
+          "elevation_max",
+          "elevation_range",
+          "slope_mean",
+          "slope_max",
+          "slope_var",
+          "ruggedness",
+          "road_dist_km",
+          "village_dist_km",
+          "infra_dist_km"
+        ]
+      },
+      "metrics": {
+        "n_samples": 30,
+        "n_pos": 10,
+        "n_neg": 20,
+        "n_groups": 5,
+        "n_features": 27,
+        "cv_f1_mean": 0.6889,
+        "cv_f1_std": 0.0831,
+        "cv_recall_mean": 0.7556,
+        "holdout_n": 12,
+        "f1": 0.3333,
+        "recall": 0.25,
+        "precision": 0.5,
+        "pr_auc": 0.5271,
+        "roc_auc": 0.6094,
+        "brier": 0.3333,
+        "confusion": [
+          [
+            7,
+            1
+          ],
+          [
+            3,
+            1
+          ]
+        ],
+        "leakage_check_passed": true,
+        "dropped_all_missing": [
+          "soil_moisture",
+          "soil_1d",
+          "soil_3d",
+          "soil_7d",
+          "sar_pre_days",
+          "sar_post_days",
+          "sar_same_orbit",
+          "hist_density_15km",
+          "nearest_spatial_km"
+        ],
+        "dropped_future_inventory": [
+          "hist_density_15km",
+          "nearest_spatial_km"
+        ],
+        "ldo_f1_mean": 0.5533,
+        "ldo_per_district": {
+          "East Khasi Hills": 0.6,
+          "South Garo Hills": 1.0,
+          "West Garo Hills": 0.5,
+          "West Jaintia Hills": 0.6667,
+          "West Khasi Hills": 0.0
+        },
+        "recall_ci95": [
+          0.046,
+          0.699
+        ],
+        "precision_ci95": [
+          0.095,
+          0.905
+        ],
+        "calibration_note": "uncalibrated (insufficient n for Platt/isotonic)"
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": "sha256:7f700bfb43e4348d",
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "gs_mamba",
+      "version": "gs_v1_v1",
+      "training_dataset": "geosentinel-audit-pkg",
+      "dataset_version": "geosentinel-audit-pkg",
+      "dataset_size": 54,
+      "feature_schema": [
+        "Elevation_m",
+        "Slope_deg",
+        "Aspect_deg",
+        "Curvature",
+        "TPI_m",
+        "Roughness_m",
+        "LULC_Class",
+        "Distance_to_Nearest_Road_m",
+        "Distance_to_Major_Road_m",
+        "Distance_to_Tertiary_or_Higher_Road_m",
+        "Road_Length_1km_m",
+        "Distance_to_Nearest_Waterway_m",
+        "Distance_to_Major_Waterway_m",
+        "Waterway_Length_1km_m"
+      ],
+      "feature_version": "gsfeat_v1",
+      "training_timestamp": "2026-09-18T10:39:37.637968+00:00",
+      "validation_strategy": "event-grouped CV (seed 42)",
+      "validation_method": "event-grouped CV (seed 42)",
+      "algorithm": "SelectiveSSMCell-gs",
+      "parameters": {
+        "seed": 42
+      },
+      "metrics": {
+        "roc_auc": 0.5221,
+        "pr_auc": 0.0465,
+        "precision": 0.0273,
+        "recall": 0.6667,
+        "f1": 0.0524,
+        "balanced_accuracy": 0.4938,
+        "brier": 0.2728,
+        "cv_overall": {
+          "n": 666,
+          "n_pos": 18,
+          "precision": 0.0265,
+          "recall": 0.6667,
+          "f1": 0.0511,
+          "balanced_accuracy": 0.4938,
+          "brier": 0.2728,
+          "confusion": [
+            [
+              208,
+              440
+            ],
+            [
+              6,
+              12
+            ]
+          ],
+          "threshold": 0.5,
+          "roc_auc": 0.5167,
+          "pr_auc": 0.0396,
+          "recall_ci95": [
+            0.437,
+            0.837
+          ]
+        },
+        "folds": [
+          {
+            "n": 222,
+            "n_pos": 6,
+            "precision": 0.0247,
+            "recall": 0.6667,
+            "f1": 0.0476,
+            "balanced_accuracy": 0.4676,
+            "brier": 0.2851,
+            "confusion": [
+              [
+                58,
+                158
+              ],
+              [
+                2,
+                4
+              ]
+            ],
+            "threshold": 0.5,
+            "roc_auc": 0.4491,
+            "pr_auc": 0.0305,
+            "recall_ci95": [
+              0.3,
+              0.903
+            ],
+            "events": [
+              "10987",
+              "13723",
+              "6214",
+              "6970",
+              "8012",
+              "9789"
+            ],
+            "val_loss": 1.38893
+          },
+          {
+            "n": 222,
+            "n_pos": 6,
+            "precision": 0.0231,
+            "recall": 0.6667,
+            "f1": 0.0447,
+            "balanced_accuracy": 0.4421,
+            "brier": 0.2909,
+            "confusion": [
+              [
+                47,
+                169
+              ],
+              [
+                2,
+                4
+              ]
+            ],
+            "threshold": 0.5,
+            "roc_auc": 0.5201,
+            "pr_auc": 0.0521,
+            "recall_ci95": [
+              0.3,
+              0.903
+            ],
+            "events": [
+              "10988",
+              "13724",
+              "6290",
+              "7335",
+              "8366",
+              "9124"
+            ],
+            "val_loss": 1.35383
+          },
+          {
+            "n": 222,
+            "n_pos": 6,
+            "precision": 0.0342,
+            "recall": 0.6667,
+            "f1": 0.065,
+            "balanced_accuracy": 0.5718,
+            "brier": 0.2424,
+            "confusion": [
+              [
+                103,
+                113
+              ],
+              [
+                2,
+                4
+              ]
+            ],
+            "threshold": 0.5,
+            "roc_auc": 0.5972,
+            "pr_auc": 0.0568,
+            "recall_ci95": [
+              0.3,
+              0.903
+            ],
+            "events": [
+              "10985",
+              "10986",
+              "10989",
+              "2025",
+              "6969",
+              "7956"
+            ],
+            "val_loss": 1.30506
+          }
+        ],
+        "pos_event_recall_per_fold": [
+          0.6667,
+          0.6667,
+          0.6667
+        ],
+        "n_seq": 666,
+        "n_events": 18,
+        "split": "GroupKFold-3 by event window (seed 42)",
+        "leakage_check_passed": true,
+        "config": {
+          "d_state": 8,
+          "proj": 16,
+          "dropout": 0.2,
+          "lr": 0.001,
+          "epochs": 60,
+          "patience": 8,
+          "seed": 42
+        }
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": null,
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "gs_fusion",
+      "version": "gs_v1_v1",
+      "training_dataset": "geosentinel-audit-pkg",
+      "dataset_version": "geosentinel-audit-pkg",
+      "dataset_size": 666,
+      "feature_schema": [
+        "rf_static_oof_proba",
+        "mamba_oof_proba"
+      ],
+      "feature_version": "gsfeat_v1",
+      "training_timestamp": "2026-09-18T11:50:37.503265+00:00",
+      "validation_strategy": "event-grouped CV (seed 42)",
+      "validation_method": "event-grouped CV (seed 42)",
+      "algorithm": "LogisticRegression-fusion",
+      "parameters": {
+        "seed": 42,
+        "fix": "csv-order labels 2026-09-18"
+      },
+      "metrics": {
+        "n": 666,
+        "n_pos": 18,
+        "precision": 0.2286,
+        "recall": 0.8889,
+        "f1": 0.3636,
+        "balanced_accuracy": 0.9028,
+        "brier": 0.0847,
+        "confusion": [
+          [
+            594,
+            54
+          ],
+          [
+            2,
+            16
+          ]
+        ],
+        "threshold": 0.5,
+        "roc_auc": 0.9176,
+        "pr_auc": 0.6735,
+        "recall_ci95": [
+          0.672,
+          0.969
+        ],
+        "split": "GroupKFold-3 by event (OOF inputs from both branches)",
+        "inputs": [
+          "rf_static_oof_proba",
+          "mamba_oof_proba"
+        ],
+        "leakage_check_passed": true,
+        "n_seq": 666
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": "sha256:4face00659bac59c",
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "gs_logreg",
+      "version": "gs_v1_v1",
+      "training_dataset": "geosentinel-audit-pkg",
+      "dataset_version": "geosentinel-audit-pkg",
+      "dataset_size": 54,
+      "feature_schema": [
+        "Elevation_m",
+        "Slope_deg",
+        "Aspect_deg",
+        "Curvature",
+        "TPI_m",
+        "Roughness_m",
+        "LULC_Class",
+        "Distance_to_Nearest_Road_m",
+        "Distance_to_Major_Road_m",
+        "Distance_to_Tertiary_or_Higher_Road_m",
+        "Road_Length_1km_m",
+        "Distance_to_Nearest_Waterway_m",
+        "Distance_to_Major_Waterway_m",
+        "Waterway_Length_1km_m"
+      ],
+      "feature_version": "gsfeat_v1",
+      "training_timestamp": "2026-09-18T12:42:06.469634+00:00",
+      "validation_strategy": "event-grouped CV (seed 42)",
+      "validation_method": "event-grouped CV (seed 42)",
+      "algorithm": "LogisticRegression",
+      "parameters": {
+        "seed": 42
+      },
+      "metrics": {
+        "roc_auc": 0.903,
+        "pr_auc": 0.8465,
+        "precision": 0.7333,
+        "recall": 0.8889,
+        "f1": 0.7998,
+        "balanced_accuracy": 0.8594,
+        "brier": 0.1291,
+        "cv_overall": {
+          "n": 54,
+          "n_pos": 18,
+          "precision": 0.7273,
+          "recall": 0.8889,
+          "f1": 0.8,
+          "balanced_accuracy": 0.8611,
+          "brier": 0.1306,
+          "confusion": [
+            [
+              30,
+              6
+            ],
+            [
+              2,
+              16
+            ]
+          ],
+          "threshold": 0.5,
+          "roc_auc": 0.8951,
+          "pr_auc": 0.8241,
+          "recall_ci95": [
+            0.672,
+            0.969
+          ]
+        },
+        "n_samples": 54,
+        "n_pos": 18,
+        "n_neg": 36,
+        "class_ratio": 2.0,
+        "split": "StratifiedGroupKFold-3 (event/spatial groups, seed 42)",
+        "n_groups": 49,
+        "features": [
+          "Elevation_m",
+          "Slope_deg",
+          "Aspect_deg",
+          "Curvature",
+          "TPI_m",
+          "Roughness_m",
+          "LULC_Class",
+          "Distance_to_Nearest_Road_m",
+          "Distance_to_Major_Road_m",
+          "Distance_to_Tertiary_or_Higher_Road_m",
+          "Road_Length_1km_m",
+          "Distance_to_Nearest_Waterway_m",
+          "Distance_to_Major_Waterway_m",
+          "Waterway_Length_1km_m"
+        ],
+        "leakage_check_passed": true
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": "sha256:ad4b689d9a3fd765",
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "gs_rf",
+      "version": "gs_v1_v1",
+      "training_dataset": "geosentinel-audit-pkg",
+      "dataset_version": "geosentinel-audit-pkg",
+      "dataset_size": 54,
+      "feature_schema": [
+        "Elevation_m",
+        "Slope_deg",
+        "Aspect_deg",
+        "Curvature",
+        "TPI_m",
+        "Roughness_m",
+        "LULC_Class",
+        "Distance_to_Nearest_Road_m",
+        "Distance_to_Major_Road_m",
+        "Distance_to_Tertiary_or_Higher_Road_m",
+        "Road_Length_1km_m",
+        "Distance_to_Nearest_Waterway_m",
+        "Distance_to_Major_Waterway_m",
+        "Waterway_Length_1km_m"
+      ],
+      "feature_version": "gsfeat_v1",
+      "training_timestamp": "2026-09-18T12:42:06.489409+00:00",
+      "validation_strategy": "event-grouped CV (seed 42)",
+      "validation_method": "event-grouped CV (seed 42)",
+      "algorithm": "RandomForestClassifier",
+      "parameters": {
+        "seed": 42
+      },
+      "metrics": {
+        "roc_auc": 0.9444,
+        "pr_auc": 0.9347,
+        "precision": 0.8611,
+        "recall": 0.8333,
+        "f1": 0.8364,
+        "balanced_accuracy": 0.8899,
+        "brier": 0.0872,
+        "cv_overall": {
+          "n": 54,
+          "n_pos": 18,
+          "precision": 0.8824,
+          "recall": 0.8333,
+          "f1": 0.8571,
+          "balanced_accuracy": 0.8889,
+          "brier": 0.0887,
+          "confusion": [
+            [
+              34,
+              2
+            ],
+            [
+              3,
+              15
+            ]
+          ],
+          "threshold": 0.5,
+          "roc_auc": 0.929,
+          "pr_auc": 0.9238,
+          "recall_ci95": [
+            0.608,
+            0.942
+          ]
+        },
+        "n_samples": 54,
+        "n_pos": 18,
+        "n_neg": 36,
+        "class_ratio": 2.0,
+        "split": "StratifiedGroupKFold-3 (event/spatial groups, seed 42)",
+        "n_groups": 49,
+        "features": [
+          "Elevation_m",
+          "Slope_deg",
+          "Aspect_deg",
+          "Curvature",
+          "TPI_m",
+          "Roughness_m",
+          "LULC_Class",
+          "Distance_to_Nearest_Road_m",
+          "Distance_to_Major_Road_m",
+          "Distance_to_Tertiary_or_Higher_Road_m",
+          "Road_Length_1km_m",
+          "Distance_to_Nearest_Waterway_m",
+          "Distance_to_Major_Waterway_m",
+          "Waterway_Length_1km_m"
+        ],
+        "leakage_check_passed": true
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": "sha256:6b35a7b42468b59d",
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "gs_hgb",
+      "version": "gs_v1_v1",
+      "training_dataset": "geosentinel-audit-pkg",
+      "dataset_version": "geosentinel-audit-pkg",
+      "dataset_size": 54,
+      "feature_schema": [
+        "Elevation_m",
+        "Slope_deg",
+        "Aspect_deg",
+        "Curvature",
+        "TPI_m",
+        "Roughness_m",
+        "LULC_Class",
+        "Distance_to_Nearest_Road_m",
+        "Distance_to_Major_Road_m",
+        "Distance_to_Tertiary_or_Higher_Road_m",
+        "Road_Length_1km_m",
+        "Distance_to_Nearest_Waterway_m",
+        "Distance_to_Major_Waterway_m",
+        "Waterway_Length_1km_m"
+      ],
+      "feature_version": "gsfeat_v1",
+      "training_timestamp": "2026-09-18T12:42:06.509176+00:00",
+      "validation_strategy": "event-grouped CV (seed 42)",
+      "validation_method": "event-grouped CV (seed 42)",
+      "algorithm": "HistGradientBoostingClassifier",
+      "parameters": {
+        "seed": 42
+      },
+      "metrics": {
+        "roc_auc": 0.5,
+        "pr_auc": 0.3329,
+        "precision": 0.2349,
+        "recall": 0.6667,
+        "f1": 0.3467,
+        "balanced_accuracy": 0.5,
+        "brier": 0.25,
+        "cv_overall": {
+          "n": 54,
+          "n_pos": 18,
+          "precision": 0.3514,
+          "recall": 0.7222,
+          "f1": 0.4727,
+          "balanced_accuracy": 0.5278,
+          "brier": 0.25,
+          "confusion": [
+            [
+              12,
+              24
+            ],
+            [
+              5,
+              13
+            ]
+          ],
+          "threshold": 0.5,
+          "roc_auc": 0.5471,
+          "pr_auc": 0.3609,
+          "recall_ci95": [
+            0.491,
+            0.875
+          ]
+        },
+        "n_samples": 54,
+        "n_pos": 18,
+        "n_neg": 36,
+        "class_ratio": 2.0,
+        "split": "StratifiedGroupKFold-3 (event/spatial groups, seed 42)",
+        "n_groups": 49,
+        "features": [
+          "Elevation_m",
+          "Slope_deg",
+          "Aspect_deg",
+          "Curvature",
+          "TPI_m",
+          "Roughness_m",
+          "LULC_Class",
+          "Distance_to_Nearest_Road_m",
+          "Distance_to_Major_Road_m",
+          "Distance_to_Tertiary_or_Higher_Road_m",
+          "Road_Length_1km_m",
+          "Distance_to_Nearest_Waterway_m",
+          "Distance_to_Major_Waterway_m",
+          "Waterway_Length_1km_m"
+        ],
+        "leakage_check_passed": true
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": "sha256:dd33b590663f8888",
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "gs_xgb",
+      "version": "gs_v1_v1",
+      "training_dataset": "geosentinel-audit-pkg",
+      "dataset_version": "geosentinel-audit-pkg",
+      "dataset_size": 54,
+      "feature_schema": [
+        "Elevation_m",
+        "Slope_deg",
+        "Aspect_deg",
+        "Curvature",
+        "TPI_m",
+        "Roughness_m",
+        "LULC_Class",
+        "Distance_to_Nearest_Road_m",
+        "Distance_to_Major_Road_m",
+        "Distance_to_Tertiary_or_Higher_Road_m",
+        "Road_Length_1km_m",
+        "Distance_to_Nearest_Waterway_m",
+        "Distance_to_Major_Waterway_m",
+        "Waterway_Length_1km_m"
+      ],
+      "feature_version": "gsfeat_v1",
+      "training_timestamp": "2026-09-18T12:42:06.526937+00:00",
+      "validation_strategy": "event-grouped CV (seed 42)",
+      "validation_method": "event-grouped CV (seed 42)",
+      "algorithm": "XGBClassifier",
+      "parameters": {
+        "seed": 42
+      },
+      "metrics": {
+        "roc_auc": 0.9474,
+        "pr_auc": 0.9252,
+        "precision": 0.8611,
+        "recall": 0.8333,
+        "f1": 0.8364,
+        "balanced_accuracy": 0.8899,
+        "brier": 0.0872,
+        "cv_overall": {
+          "n": 54,
+          "n_pos": 18,
+          "precision": 0.8824,
+          "recall": 0.8333,
+          "f1": 0.8571,
+          "balanced_accuracy": 0.8889,
+          "brier": 0.0891,
+          "confusion": [
+            [
+              34,
+              2
+            ],
+            [
+              3,
+              15
+            ]
+          ],
+          "threshold": 0.5,
+          "roc_auc": 0.929,
+          "pr_auc": 0.9009,
+          "recall_ci95": [
+            0.608,
+            0.942
+          ]
+        },
+        "n_samples": 54,
+        "n_pos": 18,
+        "n_neg": 36,
+        "class_ratio": 2.0,
+        "split": "StratifiedGroupKFold-3 (event/spatial groups, seed 42)",
+        "n_groups": 49,
+        "features": [
+          "Elevation_m",
+          "Slope_deg",
+          "Aspect_deg",
+          "Curvature",
+          "TPI_m",
+          "Roughness_m",
+          "LULC_Class",
+          "Distance_to_Nearest_Road_m",
+          "Distance_to_Major_Road_m",
+          "Distance_to_Tertiary_or_Higher_Road_m",
+          "Road_Length_1km_m",
+          "Distance_to_Nearest_Waterway_m",
+          "Distance_to_Major_Waterway_m",
+          "Waterway_Length_1km_m"
+        ],
+        "leakage_check_passed": true
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": "sha256:aabf6830a1c3f7ae",
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "gs_lgbm",
+      "version": "gs_v1_v1",
+      "training_dataset": "geosentinel-audit-pkg",
+      "dataset_version": "geosentinel-audit-pkg",
+      "dataset_size": 54,
+      "feature_schema": [
+        "Elevation_m",
+        "Slope_deg",
+        "Aspect_deg",
+        "Curvature",
+        "TPI_m",
+        "Roughness_m",
+        "LULC_Class",
+        "Distance_to_Nearest_Road_m",
+        "Distance_to_Major_Road_m",
+        "Distance_to_Tertiary_or_Higher_Road_m",
+        "Road_Length_1km_m",
+        "Distance_to_Nearest_Waterway_m",
+        "Distance_to_Major_Waterway_m",
+        "Waterway_Length_1km_m"
+      ],
+      "feature_version": "gsfeat_v1",
+      "training_timestamp": "2026-09-18T12:42:06.532685+00:00",
+      "validation_strategy": "event-grouped CV (seed 42)",
+      "validation_method": "event-grouped CV (seed 42)",
+      "algorithm": "LGBMClassifier",
+      "parameters": {
+        "seed": 42
+      },
+      "metrics": {
+        "roc_auc": 0.8741,
+        "pr_auc": 0.8648,
+        "precision": 0.6793,
+        "recall": 0.7381,
+        "f1": 0.6882,
+        "balanced_accuracy": 0.7514,
+        "brier": 0.2178,
+        "cv_overall": {
+          "n": 54,
+          "n_pos": 18,
+          "precision": 0.619,
+          "recall": 0.7222,
+          "f1": 0.6667,
+          "balanced_accuracy": 0.75,
+          "brier": 0.2206,
+          "confusion": [
+            [
+              28,
+              8
+            ],
+            [
+              5,
+              13
+            ]
+          ],
+          "threshold": 0.5,
+          "roc_auc": 0.875,
+          "pr_auc": 0.848,
+          "recall_ci95": [
+            0.491,
+            0.875
+          ]
+        },
+        "n_samples": 54,
+        "n_pos": 18,
+        "n_neg": 36,
+        "class_ratio": 2.0,
+        "split": "StratifiedGroupKFold-3 (event/spatial groups, seed 42)",
+        "n_groups": 49,
+        "features": [
+          "Elevation_m",
+          "Slope_deg",
+          "Aspect_deg",
+          "Curvature",
+          "TPI_m",
+          "Roughness_m",
+          "LULC_Class",
+          "Distance_to_Nearest_Road_m",
+          "Distance_to_Major_Road_m",
+          "Distance_to_Tertiary_or_Higher_Road_m",
+          "Road_Length_1km_m",
+          "Distance_to_Nearest_Waterway_m",
+          "Distance_to_Major_Waterway_m",
+          "Waterway_Length_1km_m"
+        ],
+        "leakage_check_passed": true
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": "sha256:f1bee56832c91267",
+      "promotion_status": "NOT_EVALUATED",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "mamba_temporal",
+      "version": "mamba_2026_02",
+      "training_dataset": "seq_storm_v1",
+      "dataset_version": "seq_storm_v1",
+      "dataset_size": 136,
+      "feature_schema": [
+        "rain1h",
+        "rain24h",
+        "rain72h",
+        "rain_slope",
+        "soil",
+        "soil_change",
+        "sar_neutral"
+      ],
+      "feature_version": "seq48x7_v1",
+      "training_timestamp": "2026-09-20T05:04:05.976744+00:00",
+      "validation_strategy": "spatial holdout by zone (train 6 / val 2)",
+      "validation_method": "spatial holdout by zone (train 6 / val 2)",
+      "algorithm": "SelectiveSSMCell",
+      "parameters": {
+        "d_in": 7,
+        "lr": 0.001,
+        "epochs": 40,
+        "patience": 6
+      },
+      "metrics": {
+        "accuracy": 0.8824,
+        "precision": 0.8824,
+        "recall": 1.0,
+        "f1": 0.9375,
+        "roc_auc": 0.8667,
+        "brier": 0.1009,
+        "ece": 0.0871,
+        "calibration": "uncalibrated \u2014 use model_score, not probability",
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            30
+          ]
+        ],
+        "n_samples": 136,
+        "n_train": 102,
+        "n_val": 34,
+        "data_source": "SIMULATED storm sequences \u2014 NOT operational skill",
+        "leakage_check_passed": true
+      },
+      "calibration_status": "uncalibrated",
+      "model_status": "EXPERIMENTAL",
+      "random_seed": 42,
+      "artifact_hash": "sha256:7478fd50682d82c5",
+      "promotion_status": "BLOCKED: validation 'spatial holdout by zone (train 6 / val 2)' != required 'spatial GroupKFold'",
+      "status": "EXPERIMENTAL"
+    },
+    {
+      "model_id": "logreg",
+      "version": "event_logreg_v1",
+      "training_dataset": "events_v2",
+      "dataset_version": "events_v2",
+      "dataset_size": 24,
+      "feature_schema": [
+        "slope",
+        "elevation_norm",
+        "ruggedness",
+        "road_proximity",
+        "drainage_proximity",
+        "settlement_density"
+      ],
+      "feature_version": "terrain6_v1",
+      "training_timestamp": "2026-09-20T05:04:06.156445+00:00",
+      "validation_strategy": "spatial GroupKFold-3 by district",
+      "validation_method": "spatial GroupKFold-3 by district",
+      "algorithm": "LogisticRegression",
+      "parameters": {
+        "C": 1.0,
+        "class_weight": "balanced",
+        "dual": false,
+        "fit_intercept": true,
+        "intercept_scaling": 1,
+        "l1_ratio": null,
+        "max_iter": 2000,
+        "multi_class": "deprecated",
+        "n_jobs": null,
+        "penalty": "l2",
+        "random_state": null,
+        "solver": "lbfgs",
+        "tol": 0.0001,
+        "verbose": 0,
+        "warm_start": false
+      },
+      "metrics": {
+        "accuracy": 0.625,
+        "precision": 0.5556,
+        "recall": 0.5,
+        "f1": 0.5263,
+        "f1_macro": 0.608,
+        "f1_weighted": 0.6216,
+        "roc_auc": 0.5857,
+        "pr_auc": 0.5185,
+        "brier": 0.2729,
+        "brier_calibrated": 0.2469,
+        "ece": 0.203,
+        "calibration": "sigmoid (Brier 0.247)",
+        "reliability_bins": [
+          {
+            "bin": [
+              0.0,
+              0.2
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "n": 6,
+            "accuracy": 0.5,
+            "confidence": 0.286
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "n": 15,
+            "accuracy": 0.3333,
+            "confidence": 0.486
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "n": 3,
+            "accuracy": 0.6667,
+            "confidence": 0.6587
+          },
+          {
+            "bin": [
+              0.8,
+              1.0
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          }
+        ],
+        "confusion_matrix": [
+          [
+            10,
+            4
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        "leakage_check_passed": true,
+        "n_samples": 24,
+        "n_positive": 10
+      },
+      "calibration_status": "sigmoid (Brier 0.247)",
+      "model_status": "DEMO",
+      "random_seed": 42,
+      "artifact_hash": "sha256:7912d5dffdd618e9",
+      "promotion_status": "BLOCKED: n=24 < minimum_samples=50; F1=0.5263 < 0.6; recall=0.5 < 0.6; Brier=0.2729 > 0.25",
+      "status": "DEMO"
+    },
+    {
+      "model_id": "rf_event",
+      "version": "event_rf_event_v1",
+      "training_dataset": "events_v2",
+      "dataset_version": "events_v2",
+      "dataset_size": 24,
+      "feature_schema": [
+        "slope",
+        "elevation_norm",
+        "ruggedness",
+        "road_proximity",
+        "drainage_proximity",
+        "settlement_density"
+      ],
+      "feature_version": "terrain6_v1",
+      "training_timestamp": "2026-09-20T05:04:10.323971+00:00",
+      "validation_strategy": "spatial GroupKFold-3 by district",
+      "validation_method": "spatial GroupKFold-3 by district",
+      "algorithm": "RandomForestClassifier",
+      "parameters": {
+        "bootstrap": true,
+        "ccp_alpha": 0.0,
+        "class_weight": "balanced",
+        "criterion": "gini",
+        "max_depth": 6,
+        "max_features": "sqrt",
+        "max_leaf_nodes": null,
+        "max_samples": null,
+        "min_impurity_decrease": 0.0,
+        "min_samples_leaf": 2,
+        "min_samples_split": 2,
+        "min_weight_fraction_leaf": 0.0,
+        "monotonic_cst": null,
+        "n_estimators": 300,
+        "n_jobs": -1,
+        "oob_score": false,
+        "random_state": 42,
+        "verbose": 0,
+        "warm_start": false
+      },
+      "metrics": {
+        "accuracy": 0.5833,
+        "precision": 0.5,
+        "recall": 0.3,
+        "f1": 0.375,
+        "f1_macro": 0.5312,
+        "f1_weighted": 0.5573,
+        "roc_auc": 0.6286,
+        "pr_auc": 0.5401,
+        "brier": 0.2356,
+        "brier_calibrated": 0.2356,
+        "ece": 0.0222,
+        "calibration": "uncalibrated \u2014 use model_score, not probability",
+        "reliability_bins": [
+          {
+            "bin": [
+              0.0,
+              0.2
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "n": 9,
+            "accuracy": 0.3333,
+            "confidence": 0.3228
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "n": 15,
+            "accuracy": 0.4667,
+            "confidence": 0.4959
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.8,
+              1.0
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          }
+        ],
+        "confusion_matrix": [
+          [
+            11,
+            3
+          ],
+          [
+            7,
+            3
+          ]
+        ],
+        "leakage_check_passed": true,
+        "n_samples": 24,
+        "n_positive": 10
+      },
+      "calibration_status": "uncalibrated \u2014 use model_score, not probability",
+      "model_status": "DEMO",
+      "random_seed": 42,
+      "artifact_hash": "sha256:af96b0826491a6d7",
+      "promotion_status": "BLOCKED: n=24 < minimum_samples=50; F1=0.375 < 0.6; recall=0.3 < 0.6",
+      "status": "DEMO"
+    },
+    {
+      "model_id": "gbm_event",
+      "version": "event_gbm_event_v1",
+      "training_dataset": "events_v2",
+      "dataset_version": "events_v2",
+      "dataset_size": 24,
+      "feature_schema": [
+        "slope",
+        "elevation_norm",
+        "ruggedness",
+        "road_proximity",
+        "drainage_proximity",
+        "settlement_density"
+      ],
+      "feature_version": "terrain6_v1",
+      "training_timestamp": "2026-09-20T05:04:10.828539+00:00",
+      "validation_strategy": "spatial GroupKFold-3 by district",
+      "validation_method": "spatial GroupKFold-3 by district",
+      "algorithm": "GradientBoostingClassifier",
+      "parameters": {
+        "ccp_alpha": 0.0,
+        "criterion": "friedman_mse",
+        "init": null,
+        "learning_rate": 0.1,
+        "loss": "log_loss",
+        "max_depth": 2,
+        "max_features": null,
+        "max_leaf_nodes": null,
+        "min_impurity_decrease": 0.0,
+        "min_samples_leaf": 1,
+        "min_samples_split": 2,
+        "min_weight_fraction_leaf": 0.0,
+        "n_estimators": 100,
+        "n_iter_no_change": null,
+        "random_state": 42,
+        "subsample": 1.0,
+        "tol": 0.0001,
+        "validation_fraction": 0.1,
+        "verbose": 0,
+        "warm_start": false
+      },
+      "metrics": {
+        "accuracy": 0.6667,
+        "precision": 0.6667,
+        "recall": 0.4,
+        "f1": 0.5,
+        "f1_macro": 0.625,
+        "f1_weighted": 0.6458,
+        "roc_auc": 0.5214,
+        "pr_auc": 0.5087,
+        "brier": 0.2956,
+        "brier_calibrated": 0.2621,
+        "ece": 0.1689,
+        "calibration": "isotonic (Brier 0.262)",
+        "reliability_bins": [
+          {
+            "bin": [
+              0.0,
+              0.2
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          },
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "n": 12,
+            "accuracy": 0.4167,
+            "confidence": 0.3264
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "n": 9,
+            "accuracy": 0.5556,
+            "confidence": 0.4758
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "n": 3,
+            "accuracy": 0.0,
+            "confidence": 0.6016
+          },
+          {
+            "bin": [
+              0.8,
+              1.0
+            ],
+            "n": 0,
+            "accuracy": null,
+            "confidence": null
+          }
+        ],
+        "confusion_matrix": [
+          [
+            12,
+            2
+          ],
+          [
+            6,
+            4
+          ]
+        ],
+        "leakage_check_passed": true,
+        "n_samples": 24,
+        "n_positive": 10
+      },
+      "calibration_status": "isotonic (Brier 0.262)",
+      "model_status": "DEMO",
+      "random_seed": 42,
+      "artifact_hash": "sha256:cdef3a80a21a9242",
+      "promotion_status": "BLOCKED: n=24 < minimum_samples=50; F1=0.5 < 0.6; recall=0.4 < 0.6; Brier=0.2956 > 0.25",
+      "status": "DEMO"
+    }
+  ]
+}

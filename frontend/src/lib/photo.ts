@@ -1,9 +1,11 @@
-const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
+const ALLOWED = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"];
 const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_VIDEO = 25 * 1024 * 1024;
 
 export function validateFile(f: File): string | null {
-  if (!ALLOWED.includes(f.type)) return "Only JPEG/PNG/WEBP allowed";
-  if (f.size > MAX_BYTES) return "File too large (>8MB)";
+  if (!ALLOWED.includes(f.type)) return "Only JPEG/PNG/WEBP/MP4/WEBM allowed";
+  const lim = f.type.startsWith("video/") ? MAX_VIDEO : MAX_BYTES;
+  if (f.size > lim) return `File too large (>${lim / 1024 / 1024}MB)`;
   return null;
 }
 

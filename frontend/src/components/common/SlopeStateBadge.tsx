@@ -1,17 +1,17 @@
 import type { SlopeState } from "../../types/risk";
 
 const STATE_STYLES: Record<SlopeState, { bg: string; text: string; icon: string; ring: string }> = {
-  STABLE: { bg: "bg-[#245c45]", text: "text-white", icon: "\u2713", ring: "ring-[#245c45]/30" },
-  STRESSED: { bg: "bg-[#d97706]", text: "text-white", icon: "\u25B2", ring: "ring-[#d97706]/30" },
-  DEGRADING: { bg: "bg-[#ea580c]", text: "text-white", icon: "\u25B2\u25B2", ring: "ring-[#ea580c]/30" },
-  CRITICAL: { bg: "bg-[#ba1a1a]", text: "text-white", icon: "\u26A0", ring: "ring-[#ba1a1a]/30" },
+  STABLE: { bg: "bg-risk-stable", text: "text-white", icon: "✓", ring: "ring-risk-stable/20" },
+  STRESSED: { bg: "bg-risk-stressed", text: "text-white", icon: "▲", ring: "ring-risk-stressed/20" },
+  DEGRADING: { bg: "bg-risk-degrading", text: "text-white", icon: "▲▲", ring: "ring-risk-degrading/20" },
+  CRITICAL: { bg: "bg-risk-critical", text: "text-white", icon: "⚠", ring: "ring-risk-critical/20" },
 };
 
 const STATE_LABELS: Record<SlopeState, string> = {
-  STABLE: "STABLE",
-  STRESSED: "STRESSED",
-  DEGRADING: "DEGRADING",
-  CRITICAL: "CRITICAL",
+  STABLE: "Stable",
+  STRESSED: "Stressed",
+  DEGRADING: "Degrading",
+  CRITICAL: "Critical",
 };
 
 interface SlopeStateBadgeProps {
@@ -31,28 +31,28 @@ export default function SlopeStateBadge({
 }: SlopeStateBadgeProps) {
   const style = STATE_STYLES[state];
   const sizeClasses = {
-    sm: "px-1.5 py-0.5 text-[8px]",
-    md: "px-2 py-0.5 text-[10px]",
-    lg: "px-3 py-1 text-xs",
+    sm: "px-2 py-0.5 text-[10px]",
+    md: "px-2.5 py-1 text-[12px]",
+    lg: "px-3 py-1.5 text-[13px]",
   };
 
   return (
-    <div className="inline-flex flex-col gap-0.5">
+    <div className="inline-flex flex-col gap-1">
       <span
-        className={`inline-flex items-center gap-1 rounded-full font-bold ring-1 ${style.bg} ${style.text} ${style.ring} ${sizeClasses[size]}`}
+        className={`inline-flex items-center gap-1.5 rounded-full font-medium ring-1 ${style.bg} ${style.text} ${style.ring} ${sizeClasses[size]}`}
       >
-        {showIcon && <span className="text-[8px]">{style.icon}</span>}
+        {showIcon && <span className="text-[10px]">{style.icon}</span>}
         {label ?? STATE_LABELS[state]}
       </span>
       {stressScore != null && (
-        <div className="flex items-center gap-1 px-1">
-          <div className="h-1 flex-1 rounded-full bg-gray-200">
-            <div className="h-1 rounded-full transition-all duration-500" style={{
+        <div className="flex items-center gap-1.5 px-1">
+          <div className="h-1.5 flex-1 rounded-full bg-gs-border">
+            <div className="h-1.5 rounded-full transition-all duration-500" style={{
               width: `${Math.min(100, stressScore * 100)}%`,
               backgroundColor: style.bg.replace("bg-[", "").replace("]", ""),
             }} />
           </div>
-          <span className="text-[7px] text-gray-500">{(stressScore * 100).toFixed(0)}%</span>
+          <span className="text-[11px] text-gs-text-secondary">{(stressScore * 100).toFixed(0)}%</span>
         </div>
       )}
     </div>

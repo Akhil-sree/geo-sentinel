@@ -21,6 +21,7 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Request,
     UploadFile,
 )
 
@@ -29,6 +30,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models_db import CitizenReport, AuditLog
 from ..schemas import ReportIn
+from ..auth import rate_limit, _client_ip
 from ..config import settings
 
 
@@ -43,9 +45,25 @@ ALLOWED = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
     "image/webp": ".webp",
+    "video/mp4": ".mp4",
+    "video/webm": ".webm",
 }
 
-MAX_SIZE = 8 * 1024 * 1024  # 8 MB
+MAX_SIZE = 8 * 1024 * 1024  # 8 MB images
+MAX_VIDEO = 25 * 1024 * 1024  # 25 MB video
+
+# Magic bytes: reject executables masquerading as media
+MAGIC = {
+    "image/jpeg": [b"\xff\xd8\xff"],
+    "image/png": [b"\x89PNG"],
+    "image/webp": [b"RIFF"],
+    "video/mp4": [b"\x00\x00\x00\x18ftyp", b"\x00\x00\x00 ftyp"],
+    "video/webm": [b"\x1a\x45\xdf\xa3"],
+}
+
+
+def _check_magic(head: bytes, mime: str) -> bool:
+    return any(head.startswith(m) or m in head[:32] for m in MAGIC.get(mime, []))
 
 
 def _safe_name(mime: str) -> str:
@@ -128,7 +146,7 @@ def create_report(
                 detail="Invalid client_timestamp. Use ISO-8601 format.",
             )
     else:
-        client_timestamp = dt.datetime.utcnow()
+        client_timestamp = dt.datetime.now(dt.timezone.utc)
 
     # ---------------------------------------------------------
     # Create report
@@ -141,12 +159,12 @@ def create_report(
         id=report_id,
         latitude=r.latitude,
         longitude=r.longitude,
-        accuracy=float(r.accuracy) if r.accuracy else None,
+        accuracy=r.accuracy,
         description=r.description,
         landslide_type=r.landslide_type,
         severity_observed=r.severity_observed,
         client_timestamp=client_timestamp,
-        synced_at=dt.datetime.utcnow(),
+        synced_at=dt.datetime.now(dt.timezone.utc),
         status="PENDING",
     )
 
@@ -183,10 +201,14 @@ def upload_media(
     report_id: str,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    request: Request = None,
 ):
     """
     Upload a photograph associated with a citizen report.
+    Rate-limited (abuse-prone binary endpoint).
     """
+    rate_limit(_client_ip(request),
+               limit=20)
 
     # ---------------------------------------------------------
     # Find report
@@ -207,20 +229,24 @@ def upload_media(
     if file.content_type not in ALLOWED:
         raise HTTPException(
             status_code=415,
-            detail="Invalid MIME type. Only JPEG/PNG/WEBP allowed.",
+            detail="Invalid MIME type. Only JPEG/PNG/WEBP/MP4/WEBM allowed.",
         )
 
     # ---------------------------------------------------------
     # Read with size limit
     # ---------------------------------------------------------
 
-    data = file.file.read(MAX_SIZE + 1)
+    data = file.file.read(MAX_VIDEO + 1)
+    limit = MAX_VIDEO if file.content_type.startswith("video/") else MAX_SIZE
 
-    if len(data) > MAX_SIZE:
+    if len(data) > limit:
         raise HTTPException(
             status_code=413,
-            detail="File too large (>8MB)",
+            detail=f"File too large (>{limit//1024//1024}MB)",
         )
+
+    if not _check_magic(data[:32], file.content_type):
+        raise HTTPException(status_code=422, detail="File header does not match declared type")
 
     # ---------------------------------------------------------
     # Generate safe filename
@@ -241,6 +267,19 @@ def upload_media(
     )
 
     # ---------------------------------------------------------
+    # Duplicate detection (content hash — offline re-uploads dedup)
+    # ---------------------------------------------------------
+
+    import hashlib as _hl
+    from app.models_db import MediaHash
+    digest = _hl.sha256(data).hexdigest()
+    dupe = db.query(MediaHash).filter(MediaHash.sha256 == digest).first()
+    if dupe:
+        raise HTTPException(status_code=409, detail={
+            "error": "duplicate media", "existing_report": dupe.report_id,
+            "sha256": digest})
+
+    # ---------------------------------------------------------
     # Store file
     # ---------------------------------------------------------
 
@@ -255,6 +294,7 @@ def upload_media(
     #     a signed URL.
 
     rep.photo_url = f"/media/{name}"
+    db.add(MediaHash(report_id=report_id, sha256=digest))
 
     db.commit()
 
@@ -307,6 +347,59 @@ def list_reports(
 
 
 # =============================================================
+# REPORT GEO-INTELLIGENCE (assistance for reviewers, NOT truth)
+# =============================================================
+
+def _haversine_km(lat1, lng1, lat2, lng2) -> float:
+    import math
+    r = 6371.0
+    d1, d2 = math.radians(lat2 - lat1), math.radians(lng2 - lng1)
+    a = (math.sin(d1 / 2) ** 2 + math.cos(math.radians(lat1))
+         * math.cos(math.radians(lat2)) * math.sin(d2 / 2) ** 2)
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+@router.get("/reports/{report_id}/geo-match")
+def report_geo_match(
+    report_id: str,
+    db: Session = Depends(get_db),
+):
+    """Match a report to the nearest zone + nearby roads + that zone's
+    latest risk context. Reviewer assistance only — a near-high-risk-zone
+    report is still unverified until a human moderates it."""
+    from ..models_db import Zone, RoadSegment, RiskScore
+    rep = db.get(CitizenReport, report_id)
+    if not rep:
+        raise HTTPException(status_code=404, detail="Report not found")
+    zones = db.query(Zone).all()
+    if not zones:
+        return {"report_id": report_id, "match": None}
+    nearest = min(zones, key=lambda z: _haversine_km(
+        rep.latitude, rep.longitude, z.latitude, z.longitude))
+    dist = _haversine_km(rep.latitude, rep.longitude,
+                         nearest.latitude, nearest.longitude)
+    roads = [r for r in db.query(RoadSegment).all()
+             if r.from_zone == nearest.id or r.to_zone == nearest.id]
+    latest = (db.query(RiskScore).filter(RiskScore.zone_id == nearest.id)
+              .order_by(RiskScore.timestamp.desc()).first())
+    # PostGIS when available (ST_DWithin), haversine fallback on sqlite —
+    # same shape either way; backend reported in the response.
+    from app.geo.postgis import roads_within_km
+    prox = roads_within_km(db, rep.latitude, rep.longitude, 30.0)
+    near = [r for r in prox["roads"]
+            if r["road"] in {rr.name for rr in roads}][:3]
+    spatial_backend = prox["spatial_backend"]
+    return {"report_id": report_id,
+            "match": {"zone_id": nearest.id, "zone_name": nearest.name,
+                      "distance_km": round(dist, 2),
+                      "zone_risk": latest.risk_score if latest else None,
+                      "zone_severity": latest.severity if latest else None,
+                      "nearby_roads": near,
+                      "spatial_backend": spatial_backend},
+            "note": "Geospatial assistance for reviewers — not verification"}
+
+
+# =============================================================
 # OFFLINE SYNCHRONIZATION
 # =============================================================
 
@@ -338,7 +431,7 @@ def sync_report(
             ),
         )
 
-    rep.synced_at = dt.datetime.utcnow()
+    rep.synced_at = dt.datetime.now(dt.timezone.utc)
 
     db.commit()
 

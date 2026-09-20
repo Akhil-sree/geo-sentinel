@@ -1,21 +1,22 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path from "path";
 
-// CesiumJS runtime files (Workers/Assets/Widgets/ThirdParty) are copied to
-// public/cesium by scripts/copy-cesium.mjs (runs on predev/prebuild).
 export default defineConfig({
   plugins: [react()],
-  define: {
-    CESIUM_BASE_URL: JSON.stringify("/cesium/"),
-  },
-  resolve: {
-    alias: {
-      cesium: path.resolve(__dirname, "node_modules/cesium"),
-    },
-  },
   test: {
     environment: "jsdom",
+  },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom", "react-router-dom", "zustand"],
+          leaflet: ["leaflet", "react-leaflet", "leaflet.heat"],
+          charts: ["recharts", "axios", "idb-keyval"],
+        },
+      },
+    },
   },
   server: {
     port: 5173,

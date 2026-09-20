@@ -1,0 +1,17 @@
+{
+ "downloaded": {
+  "coolr": 0,
+  "gsi": 865,
+  "nrsc": 0
+ },
+ "demo_seed": 10,
+ "parsed": 875,
+ "valid_ner": 871,
+ "rejected": 0,
+ "ner_excluded": 4,
+ "temporal": 10,
+ "spatial_only": 861,
+ "duplicates_merged": 0,
+ "flagged_review": 3165,
+ "at": "2026-09-15T10:48:14.365724+00:00"
+}

@@ -1,0 +1,59 @@
+{
+ "at": "2026-09-15T18:35:42.955069+00:00",
+ "header": {
+  "features": [
+   "OsmSchema-V0.6",
+   "DenseNodes"
+  ],
+  "writer": [
+   "osmium/1.19.1"
+  ],
+  "has_bbox": false,
+  "has_timestamp": false
+ },
+ "n_dense_nodes": 2036358,
+ "n_ways": 136013,
+ "n_highway_ways": 29312,
+ "highway_classes": {
+  "trunk": 435,
+  "unclassified": 3647,
+  "secondary": 450,
+  "primary": 256,
+  "tertiary": 1395,
+  "trunk_link": 23,
+  "service": 2824,
+  "residential": 16834,
+  "living_street": 52,
+  "track": 2064,
+  "path": 810,
+  "tertiary_link": 39,
+  "steps": 83,
+  "pedestrian": 36,
+  "footway": 245,
+  "road": 94,
+  "primary_link": 6,
+  "secondary_link": 3,
+  "U": 1,
+  "construction": 15
+ },
+ "bbox_nodes": [
+  89.8001,
+  25.0,
+  92.85,
+  26.1999
+ ],
+ "n_highway_nodes_kept": 310408,
+ "thinning": {
+  "rule": "rank stride 3:1/2:2/1:4",
+  "factor": 2.68
+ },
+ "coverage_gate": {
+  "bbox": [
+   89.8,
+   25.0,
+   92.85,
+   26.2
+  ],
+  "inside": true
+ }
+}

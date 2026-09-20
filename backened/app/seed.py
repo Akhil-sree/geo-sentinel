@@ -17,6 +17,28 @@ import datetime as dt
 import os
 
 
+# Terrain provenance (Phase 1D/5): STATIC manual profiles for the 8 demo
+# zones — NOT a DEM pipeline. A DEM-backed dataset (SRTM 30m / Cartosat)
+# replaces these values without schema changes; aspect/curvature/ruggedness
+# extensions belong in a terrain_features table (roadmap).
+TERRAIN_META = {
+    "dem_source": "STATIC manual profiles (seed) — no DEM pipeline yet",
+    "resolution": "zone-level (not gridded)",
+    "acquisition_version": "seed v1 (2026-07)",
+    "processing_version": "none — raw seed values",
+    "features": ["slope", "elevation", "ruggedness"],
+    "missing": ["aspect", "curvature", "relief (gridded) — roadmap"],
+    "status": "STATIC",
+}
+
+GIS_META = {
+    "zones": "STATIC demo boundaries (centroid + synthetic WKT) — seed v1",
+    "roads": "STATIC demo network (8 segments, field-verified statuses are SIMULATED)",
+    "population": "STATIC indicative figures, not census",
+    "boundaries": "district names only — no real boundary polygons yet",
+    "status": "STATIC",
+}
+
 ZONES = [
     {
         "id": "Z1",
@@ -185,6 +207,30 @@ EMERGENCY_TASKS = [
     ("Z6", "supply", "Restock Williamnagar Medical Supplies", "Ensure health center is stocked before forecasted heavy rain", "LOW", "COMPLETED", "District Health Office", "—"),
 ]
 
+VILLAGES = [
+    # (name, zone, lat, lng, population, criticality) — STATIC indicative, not census
+    ("Laitryng", "Z1", 25.31, 91.71, 1200, "high"),
+    ("Mawsynram Village", "Z2", 25.29, 91.57, 900, "high"),
+    ("Nongthymmai", "Z3", 25.61, 91.91, 8500, "critical"),
+    ("Nongstoin Town", "Z4", 25.52, 91.26, 15000, "critical"),
+    ("Tura Bazar", "Z5", 25.51, 90.21, 21000, "critical"),
+    ("Williamnagar", "Z6", 25.60, 90.46, 12000, "high"),
+    ("Jowai", "Z7", 25.45, 92.20, 18000, "critical"),
+    ("Baghmara", "Z8", 25.39, 90.63, 9500, "high"),
+]
+
+INFRASTRUCTURE = [
+    # (name, kind, zone, lat, lng, criticality) — STATIC demo registry
+    ("Sohra CHC", "hospital", "Z1", 25.30, 91.70, "critical"),
+    ("Mawsynram LP School", "school", "Z2", 25.29, 91.58, "high"),
+    ("Shillong Civil Hospital", "hospital", "Z3", 25.62, 91.90, "critical"),
+    ("Nongstoin Bridge", "bridge", "Z4", 25.53, 91.28, "high"),
+    ("Tura District Hospital", "hospital", "Z5", 25.51, 90.20, "critical"),
+    ("Williamnagar Shelter", "shelter", "Z6", 25.60, 90.47, "high"),
+    ("Jowai School", "school", "Z7", 25.46, 92.21, "high"),
+    ("Baghmara Bridge", "bridge", "Z8", 25.38, 90.64, "high"),
+]
+
 RECIPIENTS = [
     (
         "+91-98xxx-DEMO1",
@@ -225,6 +271,8 @@ def seed(db):
         AuditLog,
         RoadSegment,
         EmergencyTask,
+        Village,
+        Infrastructure,
     )
 
     from .ml.rf_model import (
@@ -256,6 +304,13 @@ def seed(db):
             db.add(
                 Zone(**zone)
             )
+
+        # Flush parents first: this codebase uses FK columns without
+        # relationship(), so SQLAlchemy cannot dependency-order one big
+        # flush. SQLite never enforces FKs (bug invisible); PostgreSQL
+        # does (fresh-PG migrate crashed on emergency_tasks). Zones
+        # persisted here → all later rows reference existing parents.
+        db.flush()
 
         # -----------------------------------------------------
         # Historical landslide events
@@ -344,6 +399,21 @@ def seed(db):
             )
         )
 
+        db.commit()
+
+    # ---------------------------------------------------------
+    # Reference tables for existing DBs (idempotent backfill):
+    # villages + infrastructure were added after v1. Never duplicates.
+    # ---------------------------------------------------------
+    if db.query(Village).count() == 0:
+        for name, zid, lat, lng, pop, crit in VILLAGES:
+            db.add(Village(name=name, zone_id=zid, latitude=lat,
+                           longitude=lng, population=pop, criticality=crit))
+        db.commit()
+    if db.query(Infrastructure).count() == 0:
+        for name, kind, zid, lat, lng, crit in INFRASTRUCTURE:
+            db.add(Infrastructure(name=name, kind=kind, zone_id=zid,
+                                  latitude=lat, longitude=lng, criticality=crit))
         db.commit()
 
     # ---------------------------------------------------------

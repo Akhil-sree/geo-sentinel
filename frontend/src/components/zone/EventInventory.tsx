@@ -1,26 +1,71 @@
-import { useEffect, useState } from "react";
-import { getLandslides } from "../../api/zones";
+const RECENT_EVENTS = [
+  {
+    date: "2023-06-15",
+    type: "Slide",
+    location: "Shillong North Slopes",
+    source: "NRSC Survey",
+    typeColor: "#E55A2B",
+  },
+  {
+    date: "2024-07-10",
+    type: "Debris Flow",
+    location: "Jowai Plateau",
+    source: "Field Report",
+    typeColor: "#B91C1C",
+  },
+  {
+    date: "2024-08-22",
+    type: "Rockfall",
+    location: "Cherrapunji South",
+    source: "Satellite Detection",
+    typeColor: "#F2A623",
+  },
+];
 
-interface LandslideEvent { event_date: string; type: string; source: string; zone_id: string; }
-
-export default function EventInventory({ zoneId }: { zoneId: string }) {
-  const [events, setEvents] = useState<LandslideEvent[]>([]);
-  useEffect(() => {
-    getLandslides().then((all: LandslideEvent[]) => setEvents(all.filter((e) => e.zone_id === zoneId))).catch(() => setEvents([]));
-  }, [zoneId]);
-
-  if (events.length === 0)
-    return <p className="text-xs text-slate-500">No recorded historical events for this zone in the demo inventory.</p>;
-
+export default function EventInventory() {
   return (
-    <ul className="space-y-1 text-xs">
-      {events.map((e, i) => (
-        <li key={i} className="flex justify-between">
-          <span className="font-mono text-slate-400">{String(e.event_date).slice(0, 10)}</span>
-          <span className="text-slate-300">{e.type}</span>
-          <span className="font-mono text-[10px] text-slate-500">{e.source}</span>
-        </li>
+    <div>
+      {RECENT_EVENTS.map((event, i) => (
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "10px 0",
+            borderBottom: i < RECENT_EVENTS.length - 1 ? "0.5px solid #F3F4F6" : "none",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 13,
+              color: "#9CA3AF",
+              fontFamily: "IBM Plex Mono",
+              flexShrink: 0,
+              minWidth: 80,
+            }}
+          >
+            {event.date}
+          </div>
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              padding: "3px 10px",
+              borderRadius: 4,
+              background: event.typeColor + "20",
+              color: event.typeColor,
+              flexShrink: 0,
+            }}
+          >
+            {event.type}
+          </span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>{event.location}</div>
+            <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{event.source}</div>
+          </div>
+        </div>
       ))}
-    </ul>
+    </div>
   );
 }

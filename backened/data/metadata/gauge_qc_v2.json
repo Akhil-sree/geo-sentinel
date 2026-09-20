@@ -1,0 +1,13 @@
+{
+ "at": "2026-09-15T18:31:13.569202+00:00",
+ "rules": {
+  "sentinel": [
+   -9999.0,
+   -999.0
+  ],
+  "hourly_spike_mm": 500.0,
+  "daily_spike_mm": 1000.0,
+  "station_range_km": 60.0
+ },
+ "code_version": "ner-pipeline-2.0"
+}

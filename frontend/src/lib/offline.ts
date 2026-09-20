@@ -11,6 +11,17 @@ export interface QueuedReport {
   attempts: number;
 }
 
+/** Sync lifecycle for the queue UI: OFFLINE → SYNCING → SYNCED / FAILED. */
+export type SyncStatus = "OFFLINE" | "SYNCING" | "SYNCED" | "FAILED";
+
+export function describeSync(online: boolean, pending: number, lastError: boolean): SyncStatus {
+  if (!online && pending > 0) return "OFFLINE";
+  if (!online) return "OFFLINE";
+  if (pending > 0 && lastError) return "FAILED";
+  if (pending > 0) return "SYNCING";
+  return "SYNCED";
+}
+
 // IndexedDB is durable storage in browsers. The fallback supports constrained
 // webviews and prevents the offline workflow from crashing when it is absent.
 const canUseIndexedDb = () => typeof indexedDB !== "undefined";

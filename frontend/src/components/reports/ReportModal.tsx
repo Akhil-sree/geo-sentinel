@@ -43,24 +43,24 @@ export default function ReportModal({ open, onClose }: { open: boolean; onClose:
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="REPORT LANDSLIP">
+    <Modal open={open} onClose={onClose} title="Report a landslide">
       <div className="space-y-3">
         <GpsCapture onFix={setFix} />
         {!fix && (
           <input value={manual} onChange={(e) => setManual(e.target.value)}
             placeholder="or lat,lng (e.g. 25.30, 91.70)"
-            className="w-full rounded border border-slate-700 bg-slate-900 p-2 text-xs" />
+            className="w-full rounded-card border border-gs-border bg-white p-2.5 text-[11px] text-gs-text" />
         )}
         <div className="grid grid-cols-2 gap-2">
           <select value={type} onChange={(e) => setType(e.target.value)}
-            className="rounded border border-slate-700 bg-slate-900 p-2 text-xs">
+            className="rounded-card border border-gs-border bg-white p-2.5 text-[11px] text-gs-text">
             <option value="debris_flow">Debris flow</option>
             <option value="rotational_slump">Rotational slump</option>
             <option value="rockfall">Rockfall</option>
             <option value="road_cut_failure">Road-cut failure</option>
           </select>
           <select value={sev} onChange={(e) => setSev(e.target.value)}
-            className="rounded border border-slate-700 bg-slate-900 p-2 text-xs">
+            className="rounded-card border border-gs-border bg-white p-2.5 text-[11px] text-gs-text">
             <option value="minor">Minor</option>
             <option value="significant">Significant</option>
             <option value="major">Major</option>
@@ -68,12 +68,12 @@ export default function ReportModal({ open, onClose }: { open: boolean; onClose:
         </div>
         <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3}
           placeholder="What did you observe?"
-          className="w-full rounded border border-slate-700 bg-slate-900 p-2 text-xs" />
+          className="w-full rounded-card border border-gs-border bg-white p-2.5 text-[11px] text-gs-text" />
         <PhotoCapture onPhoto={setPhoto} />
         <OfflineToggle />
         <button onClick={onSubmit} disabled={!canSubmit}
-          className="w-full rounded bg-sky-600 py-2 text-xs font-bold disabled:opacity-40">
-          {online ? "SUBMIT" : `QUEUE (${queued} pending)`}
+          className="w-full rounded-card bg-forest py-2.5 text-[11px] font-semibold text-white transition hover:bg-forest-800 disabled:opacity-40 active:scale-[0.98]">
+          {online ? "Submit" : `Queue (${queued} pending)`}
         </button>
       </div>
     </Modal>

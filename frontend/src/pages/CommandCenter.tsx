@@ -1,59 +1,65 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import RiskMap from "../components/map/RiskMap";
-import type { MapMode } from "../components/map/RiskMap";
 import SimTimeline from "../components/timeline/SimTimeline";
 import { ZonePanel } from "../components/zone/ZonePanel";
 import ReportModal from "../components/reports/ReportModal";
 import DataFreshnessBar from "../components/layout/DataFreshnessBar";
+import AreaRiskPanel from "../components/area/AreaRiskPanel";
 import GovernmentIntelligencePanel from "../components/intelligence/GovernmentIntelligencePanel";
-import HotspotRankingPanel from "../components/intelligence/HotspotRankingPanel";
 import CriticalSlopeCard from "../components/intelligence/CriticalSlopeCard";
+import WhyThisLocation from "../components/intelligence/WhyThisLocation";
 import RainfallScenarioControl from "../components/intelligence/RainfallScenarioControl";
-import EmergencyPriorityPanel from "../components/intelligence/EmergencyPriorityPanel";
-import WeatherForecast from "../components/zone/WeatherForecast";
+import EmergencyPrioritiesPanel from "../components/intelligence/EmergencyPrioritiesPanel";
+import EmergencyTasksPanel from "../components/intelligence/EmergencyTasksPanel";
+import SeveritySummaryPanel from "../components/intelligence/SeveritySummaryPanel";
+import WeatherOverviewPanel from "../components/intelligence/WeatherOverviewPanel";
+import WeatherForecastPanel from "../components/intelligence/WeatherForecastPanel";
+import SoilMoistureDetail from "../components/intelligence/SoilMoistureDetail";
+import CellRiskGrid from "../components/intelligence/CellRiskGrid";
+import GsPointPanel from "../components/gs/GsPointPanel";
+import RoadContext from "../components/gs/RoadContext";
+import RoadConnectivityPanel from "../components/intelligence/RoadConnectivityPanel";
+import RescueRoutePanel from "../components/intelligence/RescueRoutePanel";
+import EvacuationRoutePanel from "../components/intelligence/EvacuationRoutePanel";
+import ObservationIntelligencePanel from "../components/intelligence/ObservationIntelligencePanel";
+import ResizableSidebar from "../components/common/ResizableSidebar";
 import { getZones } from "../api/zones";
-import { getRiskMap, getRiskIntensification, getHotspotRanking } from "../api/risk";
+import { getRiskMap, getRiskIntensification } from "../api/risk";
 import { useUIStore } from "../store/uiStore";
 import { useSimClock } from "../hooks/useSimClock";
-import { useOnlineStatus } from "../hooks/useOnlineStatus";
-import { getLang, setLang, t, type Lang } from "../lib/i18n";
-import type { IntensificationResult, Hotspot, SimulationResult } from "../types/risk";
+import { useI18n } from "../lib/i18n";
+import type { IntensificationResult, SimulationResult } from "../types/risk";
+import type { Zone } from "../api/zones";
 
-const FLAGSHIP_ZONE_ID = "Z1";
-
-const LANGUAGES: { value: Lang; label: string }[] = [
-  { value: "en", label: "EN" },
-  { value: "hi", label: "HI" },
-  { value: "bn", label: "BN" },
-  { value: "kha", label: "KH" },
-  { value: "garo", label: "GA" },
-];
+const TAB_KEYS = ["zone", "intelligence", "scenario"] as const;
+const TAB_LABELS = ["Location", "Intelligence", "Scenario"];
 
 export default function CommandCenter() {
   const { zoneId } = useParams();
+  const navigate = useNavigate();
   const simTime = useUIStore((s) => s.simTime);
   const selectZone = useUIStore((s) => s.selectZone);
+  const { t } = useI18n();
   useSimClock();
-  const online = useOnlineStatus();
 
-  const [zones, setZones] = useState<any[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
   const [risks, setRisks] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
   const [reportOpen, setReportOpen] = useState(false);
   const [intensification, setIntensification] = useState<IntensificationResult[]>([]);
-  const [hotspots, setHotspots] = useState<Hotspot[]>([]);
   const [simResults, setSimResults] = useState<SimulationResult[] | null>(null);
+  const [simLabel, setSimLabel] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sideTab, setSideTab] = useState<"zone" | "intelligence" | "scenario">("zone");
-  const [mapMode, setMapMode] = useState<MapMode>("2d");
-  const [currentLang, setCurrentLang] = useState<Lang>(getLang());
 
   useEffect(() => { getZones().then(setZones).catch(() => {}); }, []);
   useEffect(() => {
     import("../api/reports").then((m) => m.getReports().then(setReports).catch(() => {}));
   }, []);
 
-  useEffect(() => {
+  const loadRisks = useCallback(() => {
+    setLoadError(null);
     getRiskMap(simTime).then((r) => {
       setRisks(r);
       const selected = useUIStore.getState().selectedZoneId;
@@ -61,199 +67,248 @@ export default function CommandCenter() {
         const worst = r.reduce((a, b) => (b.risk_score > a.risk_score ? b : a), r[0]);
         if (worst) selectZone(worst.zone_id);
       }
-    }).catch(() => {});
+    }).catch(() => setLoadError("Risk service unreachable — is the backend running on :8000?"));
     getRiskIntensification(simTime).then((r) => setIntensification(r.intensification)).catch(() => {});
-    getHotspotRanking(simTime).then((r) => setHotspots(r.hotspots)).catch(() => {});
-  }, [simTime]);
+  }, [simTime, zoneId, selectZone]);
 
-  useEffect(() => { if (zoneId) selectZone(zoneId); }, [zoneId, selectZone]);
+  useEffect(() => { loadRisks(); }, [loadRisks]);
+
+  useEffect(() => { if (zoneId) { selectZone(zoneId); } }, [zoneId, selectZone]);
 
   const selectedZoneId = useUIStore((s) => s.selectedZoneId);
   const selectedRisk = risks.find((r) => r.zone_id === selectedZoneId);
   const anyEscalated = risks.some((r) => r.escalated);
+  const escalatedCount = risks.filter((r) => r.escalated).length;
+  const stripUpdated = (() => {
+    try {
+      const iso = selectedRisk?.sim_time;
+      const d = iso ? new Date(iso) : new Date();
+      return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) + " IST";
+    } catch {
+      return "—";
+    }
+  })();
 
   const criticalCount = risks.filter((r) => r.slope_state === "CRITICAL").length;
   const degradingCount = risks.filter((r) => r.slope_state === "DEGRADING").length;
 
-  useEffect(() => { if (selectedZoneId) setSideTab("zone"); }, [selectedZoneId]);
+  useEffect(() => {
+    if (selectedZoneId) setSideTab("zone");
+  }, [selectedZoneId]);
 
-  const handleSimResults = useCallback((results: SimulationResult[]) => {
+  const handleSimResults = useCallback((results: SimulationResult[], label: string) => {
     setSimResults(results);
+    setSimLabel(label);
     setSideTab("intelligence");
   }, []);
 
-  const handleLangChange = (lang: Lang) => {
-    setCurrentLang(lang);
-    setLang(lang);
-  };
+  const handleClearSim = useCallback(() => {
+    setSimResults(null);
+    setSimLabel(null);
+  }, []);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Top status bar */}
-      <div className="flex items-center justify-between border-b border-[#d9e2d9] bg-white px-3 py-1">
-        {/* Escalation alert */}
-        <div className="flex items-center gap-2">
-          {anyEscalated && (
-            <>
-              <span className="rounded bg-[#ba1a1a] px-1.5 py-0.5 text-[8px] font-bold text-white">ALERT</span>
-              <span className="text-[9px] text-[#ba1a1a]">
-                <b>ESCALATION ACTIVE</b>
-              </span>
-              {(criticalCount + degradingCount) > 0 && (
-                <span className="text-[8px] font-bold text-[#ba1a1a]">
-                  {criticalCount > 0 && `${criticalCount} CRITICAL`}
-                  {criticalCount > 0 && degradingCount > 0 && " \u00B7 "}
-                  {degradingCount > 0 && `${degradingCount} DEGRADING`}
-                </span>
-              )}
-            </>
-          )}
-        </div>
 
-        <div className="flex items-center gap-3">
-          {/* Language selector */}
-          <div className="flex items-center gap-1">
-            <span className="text-[7px] text-[#707973]">LANG:</span>
-            {LANGUAGES.map((l) => (
-              <button
-                key={l.value}
-                onClick={() => handleLangChange(l.value)}
-                className={`rounded px-1 py-0.5 text-[8px] font-bold transition-colors ${
-                  currentLang === l.value
-                    ? "bg-[#04442f] text-white"
-                    : "text-[#707973] hover:bg-[#f0eee6]"
-                }`}
-              >
-                {l.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Online status */}
-          <div className="flex items-center gap-1">
-            <span className={`h-2 w-2 rounded-full ${online ? "bg-[#245c45]" : "bg-[#d97706]"}`} />
-            <span className={`text-[8px] font-bold ${online ? "text-[#245c45]" : "text-[#d97706]"}`}>
-              {online ? t("online") : t("offline")}
+      {/* ── Advisory bar — compact institutional ── */}
+      {anyEscalated && (
+        <div className="flex items-center gap-3 px-4 py-2" role="alert" style={{
+          background: 'linear-gradient(90deg, rgba(185,28,28,0.06) 0%, rgba(185,28,28,0.02) 100%)',
+          borderBottom: '1px solid rgba(185,28,28,0.12)',
+        }}>
+          <span className="shrink-0 flex items-center gap-1.5">
+            <span className="inline-block h-2 w-2 rounded-full" style={{ background: (criticalCount + degradingCount) > 0 ? '#B4232B' : '#D19217' }} />
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#7A4F08' }}>
+              Active Advisory
             </span>
-          </div>
+          </span>
+          <span className="text-[12px] text-gs-text-secondary">
+            <strong className="text-gs-text">{escalatedCount}</strong> location{escalatedCount === 1 ? "" : "s"} require attention
+          </span>
+          <button
+            onClick={() => navigate("/alerts")}
+            className="ml-auto shrink-0 text-[11px] font-semibold uppercase tracking-wide transition hover:opacity-80"
+            style={{ color: '#075240' }}
+          >
+            View Alerts →
+          </button>
         </div>
-      </div>
+      )}
 
+      {/* ── Service error banner ── */}
+      {loadError && (
+        <div className="mx-3 mt-2 flex items-center gap-3 rounded-lg px-4 py-3" style={{
+          background: 'rgba(185, 26, 26, 0.92)',
+          border: '1px solid rgba(255, 215, 200, 0.18)',
+        }}>
+          <span className="text-[13px] font-medium text-white">{loadError}</span>
+          <button
+            onClick={loadRisks}
+            className="ml-auto shrink-0 rounded-full bg-white/25 px-3 py-1 text-[12px] font-semibold text-white transition hover:bg-white/35"
+          >
+            ↻ Retry
+          </button>
+        </div>
+      )}
+
+      {/* ── Main Content: Map + Intelligence Console ── */}
       <div className="relative flex flex-1 overflow-hidden">
+
+        {/* Map Area — primary workspace */}
         <div className="relative flex-1">
           <RiskMap zones={zones} risks={risks}
             selectedId={selectedZoneId}
             reports={reports}
             intensification={intensification}
-            hotspots={hotspots}
             simulationResults={simResults}
-            mapMode={mapMode}
-            onToggleMode={setMapMode}
+            simulationLabel={simLabel}
+            onClearSimulation={handleClearSim}
             onSelect={(id) => useUIStore.getState().selectZone(id)} />
-          <SimTimeline />
+          {sideTab === "scenario" && <SimTimeline />}
         </div>
 
-        <aside className="flex w-[440px] flex-col overflow-y-auto border-l border-[#d9e2d9] bg-[#f0eee6]">
+        {/* ── Intelligence Console (Right Panel) ── */}
+        <ResizableSidebar>
+
+          {/* Data Provenance Bar */}
           <DataFreshnessBar />
 
-          {/* Tab bar */}
-          <div className="flex border-b border-[#d9e2d9]">
-            {(["zone", "intelligence", "scenario"] as const).map((tab) => (
+          {/* Panel Tabs — institutional tab bar */}
+          <div className="flex gap-0 px-0 pt-0" style={{
+            background: 'rgba(255,255,255,0.95)',
+            borderBottom: '1px solid #E5E7EB',
+          }}>
+            {TAB_KEYS.map((key, i) => (
               <button
-                key={tab}
-                onClick={() => setSideTab(tab)}
-                className={`flex-1 py-1.5 text-[9px] font-bold uppercase tracking-wide transition-colors ${
-                  sideTab === tab
-                    ? "border-b-2 border-[#04442f] text-[#04442f]"
-                    : "text-[#707973] hover:text-[#1b1c17]"
+                key={key}
+                onClick={() => setSideTab(key)}
+                className={`relative flex-1 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                  sideTab === key
+                    ? "gs-tab-active text-gs-text"
+                    : "text-gs-text-secondary hover:text-gs-text"
                 }`}
+                style={{
+                  background: sideTab === key ? 'rgba(7,82,64,0.04)' : 'transparent',
+                }}
               >
-                {tab === "zone" ? t("zoneDetail") : tab === "intelligence" ? t("intelligence") : t("scenario")}
+                {TAB_LABELS[i]}
               </button>
             ))}
           </div>
 
-          {/* Zone Detail Tab */}
-          {sideTab === "zone" && (
-            <>
-              <button onClick={() => setReportOpen(true)}
-                className="mx-3 my-2 rounded-lg bg-[#04442f] py-2 text-xs font-bold text-white hover:bg-[#0a5c40] transition-colors shadow-sm">
-                {t("reportLandslip")}
-              </button>
-              {selectedRisk && selectedRisk.zone_id === FLAGSHIP_ZONE_ID && (
-                <div className="mx-3 mb-2 overflow-hidden rounded-lg border border-[#04442f]/30 bg-gradient-to-r from-[#04442f]/5 to-[#0a5c40]/5">
-                  <div className="flex items-center gap-2 px-3 py-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#04442f] text-white shadow-sm">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <rect x="2" y="2" width="4" height="4" rx="1" fill="white" opacity="0.8"/>
-                        <rect x="6" y="2" width="4" height="4" rx="1" fill="white"/>
-                        <rect x="10" y="2" width="4" height="4" rx="1" fill="white" opacity="0.6"/>
-                        <rect x="2" y="6" width="4" height="4" rx="1" fill="white" opacity="0.6"/>
-                        <rect x="6" y="6" width="4" height="4" rx="1" fill="white" opacity="0.9"/>
-                        <rect x="10" y="6" width="4" height="4" rx="1" fill="white" opacity="0.4"/>
-                        <rect x="2" y="10" width="4" height="4" rx="1" fill="white" opacity="0.4"/>
-                        <rect x="6" y="10" width="4" height="4" rx="1" fill="white" opacity="0.7"/>
-                        <rect x="10" y="10" width="4" height="4" rx="1" fill="white" opacity="0.3"/>
-                      </svg>
-                    </span>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="rounded bg-[#04442f] px-1.5 py-0.5 text-[7px] font-bold text-white uppercase">Deep-Dive Zone</span>
-                        <span className="text-[9px] font-bold text-[#04442f]">Sohra (Cherrapunji)</span>
-                      </div>
-                      <p className="text-[8px] text-[#404943]">
-                        Per-cell terrain intelligence active \u2014 RF model runs on each 400m cell
-                      </p>
-                    </div>
+          {/* Panel Content (scrollable) */}
+          <div className="flex-1 overflow-y-auto">
+
+            {sideTab === "zone" && (
+              <>
+                {/* Report action */}
+                <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2">
+                  <p className="gs-label">Field Report</p>
+                  <button
+                    onClick={() => setReportOpen(true)}
+                    className="rounded-lg bg-forest px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-forest-dark active:scale-[0.98]"
+                  >
+                    + {t("btn.reportLandslide")}
+                  </button>
+                </div>
+
+                {selectedRisk ? (
+                  <div className="p-4 space-y-0">
+                    {/* Location Intelligence Header */}
+                    <AreaRiskPanel risk={selectedRisk} />
+
+                    {/* GS Point Assessment */}
+                    {(() => {
+                      const z = zones.find((zz) => zz.id === selectedZoneId);
+                      return z ? (
+                        <>
+                          <div className="gs-section-rule my-3" />
+                          <GsPointPanel lat={z.lat} lng={z.lng} label={z.name} />
+                          <div className="gs-section-rule my-3" />
+                          <RoadContext lat={z.lat} lng={z.lng} />
+                          <div className="gs-section-rule my-3" />
+                          <RescueRoutePanel zones={zones} />
+                        </>
+                      ) : null;
+                    })()}
+
+                    {/* Evidence & Slope Assessment */}
+                    <div className="gs-section-rule my-3" />
+                    <CriticalSlopeCard />
+
+                    {/* Why This Location */}
+                    <div className="gs-section-rule my-3" />
+                    <WhyThisLocation />
+
+                    {/* Zone Details */}
+                    <div className="gs-section-rule my-3" />
+                    <ZonePanel risk={selectedRisk} zoneId={selectedRisk.zone_id} />
+
+                    {/* Weather & Soil */}
+                    <div className="gs-section-rule my-3" />
+                    <WeatherForecastPanel />
+                    <div className="gs-section-rule my-3" />
+                    <SoilMoistureDetail />
+
+                    {/* Per-Cell Grid */}
+                    <div className="gs-section-rule my-3" />
+                    <CellRiskGrid />
                   </div>
-                </div>
-              )}
-              {selectedRisk ? (
-                <div className="space-y-2 p-2">
-                  <CriticalSlopeCard />
-                  <ZonePanel risk={selectedRisk} zoneId={selectedRisk.zone_id} />
-                  <WeatherForecast zoneId={selectedRisk.zone_id} />
-                </div>
-              ) : (
-                <p className="p-4 text-xs text-[#707973]">Select a zone on the map.</p>
-              )}
-            </>
-          )}
-
-          {/* Intelligence Tab */}
-          {sideTab === "intelligence" && (
-            <div className="space-y-2 p-2">
-              <EmergencyPriorityPanel />
-              <GovernmentIntelligencePanel />
-              <HotspotRankingPanel />
-            </div>
-          )}
-
-          {/* Scenario Tab */}
-          {sideTab === "scenario" && (
-            <div className="space-y-2 p-2">
-              <div className="rounded-lg border border-[#d97706]/20 bg-[#d97706]/5 px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-[#92400e]">
-                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1"/>
-                    <path d="M7 4v3.5M7 9.5v0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                  </svg>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#92400e]">
-                      {t("whatIf")}
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-10 text-center">
+                    <div className="mb-3 text-4xl text-gs-border opacity-40">◉</div>
+                    <p className="text-[15px] font-medium text-gs-text-secondary">
+                      {t("common.selectZone")}
                     </p>
-                    <p className="text-[8px] text-[#707973]">
-                      Drag the slider to see real-time risk changes on the map
+                    <p className="mt-1.5 text-[13px] text-gs-text-secondary/60">
+                      {t("common.clickPolygon")}
                     </p>
                   </div>
-                </div>
+                )}
+              </>
+            )}
+
+            {sideTab === "intelligence" && (
+              <div className="p-4 space-y-0">
+                <GovernmentIntelligencePanel />
+                <div className="gs-section-rule my-3" />
+                <SeveritySummaryPanel />
+                <div className="gs-section-rule my-3" />
+                <EmergencyPrioritiesPanel />
+                <div className="gs-section-rule my-3" />
+                <EmergencyTasksPanel />
+                <div className="gs-section-rule my-3" />
+                <WeatherOverviewPanel />
+                <div className="gs-section-rule my-3" />
+                <RoadConnectivityPanel />
+                <div className="gs-section-rule my-3" />
+                <ObservationIntelligencePanel />
+                <div className="gs-section-rule my-3" />
+                <EvacuationRoutePanel />
               </div>
-              <RainfallScenarioControl onResults={handleSimResults} />
-            </div>
-          )}
-        </aside>
+            )}
+
+            {sideTab === "scenario" && (
+              <div className="p-4 space-y-4">
+                <RainfallScenarioControl onResults={handleSimResults} onClear={handleClearSim} />
+              </div>
+            )}
+
+          </div>
+        </ResizableSidebar>
 
         <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} />
+      </div>
+
+      {/* ── Bottom status bar — institutional ── */}
+      <div className="gs-status-bar flex shrink-0 items-center gap-4 overflow-x-auto px-4 py-1.5" role="status" aria-label="Operational status">
+        <span className="shrink-0">Last Update <strong className="tabular-nums text-gs-text">{stripUpdated}</strong></span>
+        <span className="h-3 w-px shrink-0 bg-gs-border" aria-hidden />
+        <span className="shrink-0"><strong className="tabular-nums text-gs-text">{zones.length}</strong> Monitored</span>
+        <span className="h-3 w-px shrink-0 bg-gs-border" aria-hidden />
+        <span className="shrink-0"><strong className="tabular-nums text-gs-text">{escalatedCount}</strong> Advisories</span>
+        <span className="h-3 w-px shrink-0 bg-gs-border" aria-hidden />
+        <span className="shrink-0">Road Network <strong className="text-gs-text">OSM</strong></span>
       </div>
     </div>
   );

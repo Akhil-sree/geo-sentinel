@@ -12,12 +12,12 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   render() {
     if (this.state.error) {
       return (
-        <div className="grid h-full place-items-center p-8 text-center text-sm text-slate-400">
+        <div className="grid h-full place-items-center p-8 text-center text-[12px] text-gs-text-secondary">
           <div>
-            <p className="mb-2 font-semibold text-red-400">Something broke in the UI.</p>
-            <p className="mb-4 font-mono text-xs text-slate-600">{this.state.error.message}</p>
+            <p className="mb-2 font-semibold text-risk-critical">Something broke in the UI.</p>
+            <p className="mb-4 text-[10px] text-gs-text-secondary">{this.state.error.message}</p>
             <button onClick={() => this.setState({ error: null })}
-              className="rounded bg-sky-600 px-4 py-1.5 text-xs font-semibold">Reload view</button>
+              className="rounded-card bg-forest px-4 py-1.5 text-[11px] font-medium text-white transition hover:bg-forest-800">Reload view</button>
           </div>
         </div>
       );

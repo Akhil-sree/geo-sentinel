@@ -4,15 +4,85 @@ services:
     ports: ["8000:8000"]
     environment:
       - DEMO_MODE=true
-      - DATABASE_URL=sqlite:///./geo_sentinel.db
+      # P0 fix: absolute sqlite path on the shared sqlite_data volume, so the
+      # API and the worker use the same file. Relative sqlite:///./... URLs
+      # resolved against different CWDs (split-brain) — see app/database.py.
+      - DATABASE_URL=sqlite:////data/geo_sentinel.db
       - SMS_PROVIDER=mock
-      - STATIC_WEIGHT=0.5
-      - DYNAMIC_WEIGHT=0.5
-    volumes: ["./backened/models:/app/models", "./backened/media:/app/media"]
+      # Fusion weights intentionally NOT set here: single source of truth is
+      # backened/risk_thresholds.yaml (static 0.4 / dynamic 0.6, as tested).
+      - RAIN_PROVIDER=mock
+      - SATELLITE_LIVE=false
+      - MAMBA_LIVE=false
+      - ALERT_COOLDOWN_MIN=360
+      # - ADMIN_API_KEY=change-me  # uncomment to lock /alerts/send + moderation
+      # - CORS_ORIGINS=https://your-production-domain
+    # ./datasets:/datasets:ro — terrain rasters + training sources resolve to
+    # /datasets in-container (DATASETS_DIR=<repo>/datasets). Without it,
+    # gs_point returns honest 503 MODEL_UNAVAILABLE instead of risk.
+    volumes: ["./backened/models:/app/models", "./backened/media:/app/media", "sqlite_data:/data", "./datasets:/datasets:ro"]
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
+  worker:
+    build: ./backened
+    command: ["python", "worker.py"]
+    environment:
+      - DEMO_MODE=true
+      # P0 fix: same absolute sqlite path + shared volume as backend.
+      - DATABASE_URL=sqlite:////data/geo_sentinel.db
+      - SMS_PROVIDER=mock
+      - RAIN_PROVIDER=mock
+      - WORKER_INTERVAL_MIN=15
+      - ALERT_COOLDOWN_MIN=360
+    volumes: ["./backened/models:/app/models", "./backened/media:/app/media", "sqlite_data:/data", "./datasets:/datasets:ro"]
+    restart: unless-stopped
+    depends_on: [backend]
+    # Worker runs worker.py (no HTTP server), so the image's :8000
+    # HEALTHCHECK can never pass here — disable it. Worker liveness is
+    # proven by job rows served at /api/worker-status, not by HTTP.
+    healthcheck:
+      test: ["NONE"]
   frontend:
     build: ./frontend
     ports: ["5173:80"]
+    restart: unless-stopped
     depends_on: [backend]
+  # ---- PROD PROFILE: Postgres+PostGIS ----
+  # Started only with: docker compose --profile prod up --build
+  # Runtime VERIFIED 2026-09-15 (PostgreSQL 16.4 + PostGIS 3.4, migrate v1–v6,
+  # backend + worker E2E against Postgres; see docs/POSTGRES_POSTGIS.md).
+# (Redis is OPTIONAL — rate limiting uses in-memory store by default;
+#  set REDIS_URL to enable shared Redis-backed rate limiting for multi-worker.)
+# Postgres needs DATABASE_URL=postgresql+psycopg2://... (see .env.example).
+  # NOTE: the dev default below exists so plain `docker compose config/up`
+  # validates without prod credentials. PROD MUST set POSTGRES_PASSWORD to a
+  # strong value — the backend refuses to boot the prod profile otherwise
+  # (see backened/app/database.py prod guard / docs/POSTGRES_POSTGIS.md).
+  postgres:
+    image: postgis/postgis:16-3.4
+    profiles: [prod]
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-geosentinel}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-geosentinel-dev-only}
+      - POSTGRES_DB=${POSTGRES_DB:-geosentinel}
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-geosentinel}"]
+      interval: 15s
+
+  # Redis for shared rate limiting (optional; enable with REDIS_URL)
+  redis:
+    image: redis:7-alpine
+    profiles: [prod]
+    volumes: ["redis_data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+
+volumes:
+  pgdata:
+  redis_data:
+  # P0: shared sqlite file for the default (non-prod) backend+worker pair.
+  sqlite_data:

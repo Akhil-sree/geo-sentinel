@@ -1,0 +1,42 @@
+{
+ "version": "ner_v1",
+ "status": "PASS_WITH_PARTIAL",
+ "checks": {
+  "split_uniqueness": "PASS",
+  "split_class_balance": "PASS",
+  "balance_detail": {
+   "test": [
+    "NO_RECORDED_LANDSLIDE",
+    "RECORDED_LANDSLIDE"
+   ],
+   "train": [
+    "NO_RECORDED_LANDSLIDE",
+    "RECORDED_LANDSLIDE"
+   ],
+   "val": [
+    "NO_RECORDED_LANDSLIDE",
+    "RECORDED_LANDSLIDE"
+   ]
+  },
+  "temporal_direction": "PASS",
+  "temporal_detail": "train_years=[2022, 2023] test_years=[2024]",
+  "spatial_group_separation": "PARTIAL",
+  "spatial_detail": "positives train=['East Khasi Hills', 'South Garo Hills', 'West Garo Hills'] test=['East Khasi Hills', 'West Garo Hills', 'West Khasi Hills'] (overlap disclosed: fixed sites repeat across years at n=30)",
+  "control_split_integrity": "PASS",
+  "control_split_detail": [],
+  "control_linkage_documented": "PASS",
+  "no_label_feature": "PASS",
+  "no_silent_zeros": "PASS",
+  "all_none_columns": [
+   "soil_moisture",
+   "soil_1d",
+   "soil_3d",
+   "soil_7d",
+   "sar_same_orbit"
+  ],
+  "no_future_rainfall": "PASS",
+  "future_detail": [],
+  "sar_metadata_only": "PASS"
+ },
+ "at": "2026-09-18T12:39:59.352067+00:00"
+}

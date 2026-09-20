@@ -1,0 +1,13 @@
+{
+ "source_name": "GSI landslide inventory via bharatlas",
+ "source_url": "https://bharatlas.com/view/gsi_landslide_inventory (parquet mirror of GSI NGDR/Bhukosh data)",
+ "license": "CC0-1.0",
+ "retrieval_date": "2026-09-15",
+ "n_meghalaya": 865,
+ "year_known": 219,
+ "year_unknown": 646,
+ "geographic_coverage": "Meghalaya bbox 24.5\u201326.5N 89.5\u201393.0E",
+ "label_definition": "catalogued slide occurrence (no exact dates)",
+ "boundary": "year-or-unknown resolution \u2192 spatial features + GIS display only; NOT temporal sequences",
+ "citation": "Geological Survey of India via NGDR/Bhukosh; accessed via bharatlas CC0-1.0 mirror"
+}

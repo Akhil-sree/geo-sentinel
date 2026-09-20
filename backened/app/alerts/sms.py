@@ -41,9 +41,12 @@ def _template(
     """
     Load a reviewed alert template.
 
-    Falls back to English if the requested language
-    template does not exist.
+    Only en/hi are reviewed (see lang_status.json). as/mni fall back
+    to English — emergency text is NEVER machine-translated.
     """
+
+    if lang not in ("en", "hi"):
+        lang = "en"
 
     path = os.path.join(
         TPL_DIR,
@@ -303,6 +306,23 @@ def dispatch_alert(
 
     db = SessionLocal()
 
+    # Idempotency key: zone + severity + UTC hour bucket. A duplicate
+    # dispatch inside the bucket returns deduplicated instead of re-sending
+    # (double-submit / double-worker safe; escalation uses a new severity).
+    from datetime import datetime, timezone as _tz
+    bucket = datetime.now(_tz.utc).strftime("%Y-%m-%dT%H")
+    idem_key = f"{zone_id}:{severity}:{bucket}"
+    prior = (db.query(Alert)
+             .filter(Alert.zone_id == zone_id, Alert.severity == severity)
+             .order_by(Alert.created_at.desc()).first())
+    if prior and prior.created_at:
+        ts = prior.created_at.replace(tzinfo=_tz.utc)
+        if ts.strftime("%Y-%m-%dT%H") == bucket:
+            db.close()
+            return {"sent": 0, "deduplicated": True,
+                    "idempotency_key": idem_key,
+                    "detail": "same zone+severity already dispatched this hour"}
+
     provider = get_sms_provider()
 
     sent = []
@@ -403,7 +423,8 @@ def dispatch_alert(
                 detail=(
                     f"zone={zone_id} "
                     f"sev={severity} "
-                    f"n={len(sent)}"
+                    f"n={len(sent)} "
+                    f"idem={idem_key}"
                 ),
             )
         )
@@ -428,4 +449,7 @@ def dispatch_alert(
     return {
         "sent": len(sent),
         "messages": sent,
+        "delivery_mode": ("MOCK DELIVERY — logged only, no real SMS sent"
+                          if provider.__class__.__name__ == "MockSMSProvider"
+                          else "LIVE provider — verification required"),
     }

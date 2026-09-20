@@ -10,17 +10,19 @@ import os
 import math
 from datetime import datetime, timedelta, timezone
 from app.ingest.base import IngestionAdapter
+from app.providers.common import CANONICAL_ZONES, canonical_zone, store_rainfall_rows
 
-ZONES = ["MZ-CHERRAPUNJI", "MZ-MAWSYNRAM", "MZ-SOHPUNG", "MZ-MAWKYRWAT",
-         "MZ-SHILLONG", "MZ-TURA", "MZ-WILLNAGAR", "MZ-JAINTIA"]
+# Canonical zone ids (match Zones table). Mock amplitude profile per zone.
+ZONES = list(CANONICAL_ZONES)
 
 
 def _monsoon_mm(zone_id: str, sim_hour: int, phase: int) -> float:
     """Synthetic intensity curve: 4 phases over 168h, per-zone amplitude.
     sim_hour = 24..168 (frontend scrubber), phase = hours since real now
     (production path just uses the observed series)."""
-    amplitude = {"MZ-CHERRAPUNJI": 60.0, "MZ-MAWSYNRAM": 55.0,
-                 "MZ-SOHPUNG": 40.0, "MZ-MAWKYRWAT": 25.0}.get(zone_id, 18.0)
+    zid = canonical_zone(zone_id) or zone_id
+    amplitude = {"Z1": 60.0, "Z2": 55.0,
+                 "Z3": 40.0, "Z4": 25.0}.get(zid, 18.0)
     # build-up → intense → peak → decay
     if sim_hour < 48:      peak = 0.15
     elif sim_hour < 96:    peak = 0.45
@@ -52,20 +54,48 @@ class MockIMDAdapter(IngestionAdapter):
         return out
 
     def validate(self, raw: list[dict]) -> list[dict]:
+        from app.providers.common import parse_ts
         ok = []
         for r in raw:
-            if r.get("zone_id") and r.get("rainfall_mm_per_hr") is not None:
+            zid = canonical_zone(r.get("zone_id"))
+            if not zid or r.get("rainfall_mm_per_hr") is None:
+                continue
+            try:
                 mm = float(r["rainfall_mm_per_hr"])
-                if 0.0 <= mm < 500.0:            # plausibility gate
-                    r["rainfall_mm_per_hr"] = mm
-                    ok.append(r)
+            except (TypeError, ValueError):
+                continue
+            if not (0.0 <= mm < 500.0):          # plausibility gate
+                continue
+            if parse_ts(r.get("timestamp")) is None:  # clock-error gate
+                continue
+            r["zone_id"] = zid
+            r["rainfall_mm_per_hr"] = mm
+            ok.append(r)
         return ok
+
+    def normalize(self, r: dict) -> dict:
+        return {"zone_id": canonical_zone(r.get("zone_id")),
+                "timestamp": r.get("timestamp"),
+                "rainfall_mm_per_hr": float(r["rainfall_mm_per_hr"])}
+
+    def store(self, db, records: list[dict]) -> None:
+        # Mock regenerates the full 7-day window every run: replace, don't
+        # append (bounds the table; combined with exact-ts dedup = idempotent).
+        from app.providers.common import replace_source_rows
+        from app.models_db import RainfallObservation
+        replace_source_rows(db, RainfallObservation, "IMD_MOCK")
+        store_rainfall_rows(db, records, source="IMD_MOCK",
+                            quality="DEMO_DATA")
+
+
+def real_mode_active() -> bool:
+    """Read at call time, not import (env may change after startup)."""
+    return bool(os.getenv("IMD_API_BASE"))
 
 
 class RealIMDAdapter(MockIMDAdapter):
     """Activates only when IMD_API_BASE is set. Same contract; different fetch."""
     state = "LIVE"
-    REAL_MODE_ACTIVE = bool(os.getenv("IMD_API_BASE"))
 
     def fetch(self) -> list[dict]:
         import httpx

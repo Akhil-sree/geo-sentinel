@@ -1,0 +1,44 @@
+{
+  "experiment": "gs_v1",
+  "seed": 42,
+  "features": [
+    "Rain_1h_mm",
+    "Rain_3h_mm",
+    "Rain_6h_mm",
+    "Rain_12h_mm",
+    "Rain_24h_mm",
+    "Rain_72h_mm",
+    "swvl1",
+    "swvl2",
+    "swvl3",
+    "swvl4",
+    "t2m",
+    "d2m",
+    "sp",
+    "u10",
+    "v10"
+  ],
+  "cutoff": {
+    "rule": "strictly-before-event-day",
+    "final_steps": 49,
+    "dropped_short_sequences": [],
+    "n_kept": 666,
+    "features": [
+      "Rain_1h_mm",
+      "Rain_3h_mm",
+      "Rain_6h_mm",
+      "Rain_12h_mm",
+      "Rain_24h_mm",
+      "Rain_72h_mm",
+      "swvl1",
+      "swvl2",
+      "swvl3",
+      "swvl4",
+      "t2m",
+      "d2m",
+      "sp",
+      "u10",
+      "v10"
+    ]
+  }
+}

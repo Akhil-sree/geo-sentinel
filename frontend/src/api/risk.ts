@@ -1,5 +1,10 @@
 import { api } from "./client";
-import type { ZoneRisk, RiskHistoryPoint, TrajectoryPoint, Hotspot, SimulationResult, IntensificationResult, ZoneEvidence } from "../types/risk";
+import type {
+  ZoneRisk, RiskHistoryPoint, TrajectoryPoint, Hotspot,
+  SimulationResult, IntensificationResult, ZoneEvidence,
+  CellGridResponse, TemporalCellGridResponse, WeatherForecast,
+  EmergencyPriority, SoilMoistureResponse,
+} from "../types/risk";
 
 export const getRiskMap = (t: number) =>
   api.get<ZoneRisk[]>("/risk/map", { params: { t } }).then((r) => r.data);
@@ -18,6 +23,28 @@ export const getZoneSAR = (zoneId: string) =>
 
 export const getModelStatus = () =>
   api.get("/risk/model/status").then((r) => r.data);
+
+export interface ProviderState {
+  source: string;
+  freshness: string;
+  quality: string;
+  is_live: boolean;
+  is_simulated: boolean;
+  observed_at: string | null;
+  soil_moisture_source?: string;
+  soil_moisture_status?: string;
+}
+
+export const getDataStatus = () =>
+  api.get<{
+    mode: string;
+    providers: ProviderState[];
+    models: any;
+    delivery: Record<string, string>;
+  }>("/data-status").then((r) => r.data);
+
+export const getWorkerStatus = () =>
+  api.get("/worker-status").then((r) => r.data);
 
 export const getRiskTrajectory = (zoneId: string) =>
   api.get<{ trajectory: TrajectoryPoint[]; interpretation: string }>(
@@ -46,79 +73,19 @@ export const getRiskIntensification = (t: number) =>
 export const getZoneEvidence = (zoneId: string, t: number) =>
   api.get<ZoneEvidence>(`/risk/${zoneId}/evidence`, { params: { t } }).then((r) => r.data);
 
-export interface CellData {
-  lat: number;
-  lng: number;
-  static_score?: number;
-  risk_score: number;
-  severity?: string;
-  slope_state: string;
-  slope_state_color: string;
-  stress_score: number;
-  escalated?: boolean;
-}
+export const getCellGrid = (zoneId: string, t: number, resolution: number = 20, mode: string = "observed") =>
+  api.get<CellGridResponse>(`/risk/${zoneId}/cell-grid`, { params: { t, resolution, mode } }).then((r) => r.data);
 
-export const getCellGrid = (zoneId: string, t: number, resolution = 20) =>
-  api.get<{ zone_id: string; name: string; cell_count: number; cells: CellData[] }>(
-    `/risk/${zoneId}/cell-grid`, { params: { t, resolution } }
-  ).then((r) => r.data);
-
-export const getTemporalCellGrid = (zoneId: string, resolution = 16) =>
-  api.get<{ zone_id: string; name: string; timesteps: { t: number; label: string; cells: CellData[] }[] }>(
-    `/risk/${zoneId}/cell-grid/temporal`, { params: { resolution } }
-  ).then((r) => r.data);
-
-export interface ForecastPoint {
-  hours_ahead: number;
-  projected_rainfall_24h: number;
-  projected_rainfall_72h: number;
-  projected_soil_moisture: number;
-  projected_risk: number;
-  projected_severity: string;
-  slope_state: string;
-  slope_state_label: string;
-  slope_state_color: string;
-  escalated: boolean;
-  rainfall_intensity: string;
-  rainfall_color: string;
-}
-
-export interface ForecastResult {
-  zone_id: string;
-  name: string;
-  current_risk: number;
-  current_severity: string;
-  forecasts: ForecastPoint[];
-  verdict: string;
-  verdict_color: string;
-  confidence_note: string;
-}
+export const getTemporalCellGrid = (zoneId: string, resolution: number = 12, mode: string = "observed") =>
+  api.get<TemporalCellGridResponse>(`/risk/${zoneId}/cell-grid/temporal`, { params: { resolution, mode } }).then((r) => r.data);
 
 export const getWeatherForecast = (zoneId: string, t: number) =>
-  api.get<ForecastResult>(`/risk/${zoneId}/forecast`, { params: { t } }).then((r) => r.data);
-
-export interface EmergencyPriority {
-  zone_id: string;
-  name: string;
-  district: string;
-  risk_score: number;
-  severity: string;
-  slope_state: string;
-  slope_state_label: string;
-  slope_state_color: string;
-  escalated: boolean;
-  population: number;
-  road_proximity: number;
-  urgency_score: number;
-  tier: string;
-  tier_color: string;
-  response_time: string;
-  evac_status: string;
-  evac_color: string;
-  rank: number;
-}
+  api.get<WeatherForecast>(`/risk/${zoneId}/forecast`, { params: { t } }).then((r) => r.data);
 
 export const getEmergencyPriorities = (t: number) =>
   api.get<{ priorities: EmergencyPriority[]; total: number; analyzed_at: string }>(
     "/risk/emergency-priorities", { params: { t } }
   ).then((r) => r.data);
+
+export const getSoilMoisture = (zoneId: string) =>
+  api.get<SoilMoistureResponse>(`/risk/${zoneId}/soil-moisture`).then((r) => r.data);

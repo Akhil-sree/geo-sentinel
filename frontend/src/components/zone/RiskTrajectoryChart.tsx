@@ -1,122 +1,178 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  AreaChart, Area, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, ReferenceLine, CartesianGrid,
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
 import { getRiskTrajectory } from "../../api/risk";
-import type { TrajectoryPoint, TrajectoryInterpretation } from "../../types/risk";
+import { getZoneHistory } from "../../api/risk";
+import type { TrajectoryPoint } from "../../types/risk";
 
-const INTERP_LABELS: Record<string, string> = {
-  RAPIDLY_INTENSIFYING: "RAPIDLY INTENSIFYING",
-  GRADUALLY_INCREASING: "GRADUALLY INCREASING",
-  DECREASING: "DECREASING",
-  STABLE: "STABLE",
-  VARIABLE: "VARIABLE",
-  NO_DATA: "INSUFFICIENT DATA",
-};
-
-const INTERP_COLORS: Record<string, string> = {
-  RAPIDLY_INTENSIFYING: "#ba1a1a",
-  GRADUALLY_INCREASING: "#ea580c",
-  DECREASING: "#245c45",
-  STABLE: "#245c45",
-  VARIABLE: "#d97706",
-  NO_DATA: "#707973",
-};
-
-interface ChartPoint extends TrajectoryPoint {
-  t: string;
+function fmtTime(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}h`;
 }
 
 export default function RiskTrajectoryChart({ zoneId }: { zoneId: string }) {
-  const [data, setData] = useState<ChartPoint[]>([]);
-  const [interp, setInterp] = useState<TrajectoryInterpretation>("NO_DATA");
+  const [data, setData] = useState<TrajectoryPoint[] | null>(null);
   const [animIdx, setAnimIdx] = useState(-1);
 
   useEffect(() => {
+    let cancelled = false;
+    setData(null);
+    setAnimIdx(-1);
     getRiskTrajectory(zoneId)
       .then((r) => {
-        const trajectory = r.trajectory.map((p) => ({
-          ...p,
-          t: new Date(p.timestamp).getHours() + "h",
-        }));
-        setData(trajectory);
-        setInterp(r.interpretation as TrajectoryInterpretation);
-        // Animate points sequentially
-        setAnimIdx(-1);
-        trajectory.forEach((_, i) => {
-          setTimeout(() => setAnimIdx(i), i * 80);
-        });
+        if (cancelled) return;
+        if (r.trajectory?.length) {
+          setData(r.trajectory);
+        } else {
+          // Fallback: live history points (no stored slope-state yet)
+          return getZoneHistory(zoneId).then((rows: any[]) => {
+            if (cancelled) return;
+            setData(rows.map((h) => ({
+              timestamp: h.timestamp,
+              risk_score: h.risk_score,
+              static: h.static,
+              dynamic: h.dynamic,
+              severity: h.severity,
+              escalated: h.escalated,
+              slope_state: "STABLE" as const,
+              slope_state_label: "Stable",
+              slope_state_color: "#2563EB",
+            })));
+          });
+        }
       })
-      .catch(() => {});
+      .catch(() => { if (!cancelled) setData([]); });
+    return () => { cancelled = true; };
   }, [zoneId]);
 
-  if (data.length === 0) return null;
+  useEffect(() => {
+    if (!data || !data.length) return;
+    setAnimIdx(-1);
+    const timers = data.map((_, i) => setTimeout(() => setAnimIdx(i), i * 80));
+    return () => timers.forEach(clearTimeout);
+  }, [data]);
 
-  const lastPoint = data[data.length - 1];
-  const firstPoint = data[0];
-  const riskChange = lastPoint.risk_score - firstPoint.risk_score;
+  if (data === null) {
+    return <p className="text-[13px] text-gs-text-secondary">Loading trajectory…</p>;
+  }
+
+  if (data.length === 0) {
+    return (
+      <div>
+        <p className="text-[16px] font-medium text-gs-text">Risk trajectory</p>
+        <p className="mt-1 text-[13px] text-gs-text-secondary">
+          No trajectory yet — move the event scrubber to generate risk history for this zone.
+        </p>
+      </div>
+    );
+  }
+
+  const chartData = data.map((d) => ({
+    time: fmtTime(d.timestamp),
+    fused: d.risk_score,
+    rf: d.static,
+    mamba: d.dynamic,
+  }));
+
+  const pcts = data.map((d) => Math.round(d.risk_score * 100) + "%");
+  const riskChange = data[data.length - 1].risk_score - data[0].risk_score;
+  const last = data[data.length - 1];
+  const worsening = riskChange >= 0;
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-bold text-[#1b1c17]">
-          RISK TRAJECTORY
+        <p className="text-[16px] font-medium text-gs-text">
+          Risk trajectory
         </p>
         <span
-          className="rounded px-1.5 py-0.5 text-[8px] font-bold"
-          style={{ color: INTERP_COLORS[interp], backgroundColor: `${INTERP_COLORS[interp]}15` }}
+          className="rounded px-2 py-0.5 text-[13px] font-medium"
+          style={{ color: last.slope_state_color, backgroundColor: `${last.slope_state_color}12` }}
         >
-          {INTERP_LABELS[interp]}
+          {last.slope_state_label} · {pcts[pcts.length - 1]}
         </span>
       </div>
 
-      {/* Risk progression display */}
-      <div className="flex items-center gap-1 text-[9px]">
-        {data.filter((_, i) => i % Math.max(1, Math.floor(data.length / 4)) === 0 || i === data.length - 1).map((p, i, arr) => (
+      <div className="flex items-center gap-1.5 text-[14px] flex-wrap">
+        {pcts.map((pct, i) => (
           <div key={i} className="flex items-center">
-            <span className={`font-bold ${i <= animIdx ? "animate-count" : "opacity-30"}`}
-              style={{ color: p.severity === "VERY_HIGH" || p.severity === "HIGH" ? "#ba1a1a" : p.severity === "MODERATE" ? "#d97706" : "#245c45" }}>
-              {(p.risk_score * 100).toFixed(0)}%
+            <span
+              className={`font-medium ${i <= animIdx ? "animate-count" : "opacity-30"}`}
+              style={{ color: data[i].slope_state_color }}
+              title={`${fmtTime(data[i].timestamp)} — ${data[i].slope_state_label}`}
+            >
+              {pct}
             </span>
-            {i < arr.length - 1 && <span className="mx-0.5 text-gray-400">→</span>}
+            {i < pcts.length - 1 && <span className="mx-0.5 text-gs-border">→</span>}
           </div>
         ))}
       </div>
 
-      {/* Change indicator */}
       {Math.abs(riskChange) > 0.01 && (
-        <p className="text-[8px] font-semibold" style={{ color: riskChange >= 0 ? "#ba1a1a" : "#245c45" }}>
-          {riskChange >= 0 ? "↑" : "↓"} {(Math.abs(riskChange) * 100).toFixed(1)}% overall change
+        <p className="text-[13px] font-medium" style={{ color: worsening ? "#E55A2B" : "#2563EB" }}>
+          {worsening ? "↑" : "↓"} {(Math.abs(riskChange) * 100).toFixed(1)}% overall change
         </p>
       )}
 
-      <div className="h-28 w-full">
+      <div className="h-44 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e4e3db" />
-            <XAxis dataKey="t" tick={{ fontSize: 7, fill: "#707973" }} interval={Math.floor(data.length / 4)} />
-            <YAxis domain={[0, 1]} tick={{ fontSize: 7, fill: "#707973" }} width={22} />
-            <Tooltip
-              contentStyle={{ fontSize: 9, borderRadius: 4, border: "1px solid #d9e2d9" }}
-              formatter={(v: any, name: string) => [
-                v != null ? Number(v).toFixed(3) : "—",
-                name === "risk" ? "Fused Risk" : name === "static" ? "Static (RF)" : "Dynamic (Mamba)",
-              ]}
+          <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+            <XAxis
+              dataKey="time"
+              tick={{ fontSize: 12, fill: "#9CA3AF" }}
+              axisLine={{ stroke: "#E5E7EB" }}
+              tickLine={false}
             />
-            <ReferenceLine y={0.75} stroke="#ba1a1a" strokeDasharray="3 3" strokeOpacity={0.5} />
-            <ReferenceLine y={0.50} stroke="#d97706" strokeDasharray="3 3" strokeOpacity={0.4} />
-            <Area dataKey="risk_score" name="risk" stroke="#ba1a1a" fill="#ba1a1a" fillOpacity={0.1} strokeWidth={1.5} dot={{ r: 2, fill: "#ba1a1a" }} />
-            <Line dataKey="static" stroke="#245c45" strokeWidth={1} dot={false} strokeDasharray="4 2" />
-            <Line dataKey="dynamic" stroke="#ea580c" strokeWidth={1} dot={false} />
-          </AreaChart>
+            <YAxis
+              domain={[0, 1]}
+              tick={{ fontSize: 12, fill: "#9CA3AF" }}
+              ticks={[0, 0.25, 0.5, 0.75, 1]}
+              axisLine={false}
+              tickLine={false}
+              width={30}
+            />
+            <Tooltip
+              formatter={(val: number) => val.toFixed(2)}
+              contentStyle={{ fontSize: 13, borderRadius: 8, border: "1px solid rgba(255, 255, 255, 0.30)", background: "rgba(255, 255, 255, 0.92)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", boxShadow: "0 4px 14px rgba(15, 35, 27, 0.10)" }}
+            />
+            <Legend
+              iconType="line"
+              iconSize={12}
+              wrapperStyle={{ fontSize: 13, paddingTop: 8 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="fused"
+              name="Fused Risk"
+              stroke="#B91C1C"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="rf"
+              name="Static (RF)"
+              stroke="#2563EB"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="mamba"
+              name="Dynamic (Mamba)"
+              stroke="#E55A2B"
+              strokeWidth={2}
+              dot={false}
+              strokeDasharray="4 2"
+              activeDot={{ r: 4 }}
+            />
+          </LineChart>
         </ResponsiveContainer>
-      </div>
-
-      <div className="flex gap-3 text-[8px] text-[#707973]">
-        <span><i className="mr-1 inline-block h-1.5 w-3 rounded bg-[#ba1a1a]" /> Fused Risk</span>
-        <span><i className="mr-1 inline-block h-1.5 w-3 rounded bg-[#245c45]" style={{ borderTop: "1px dashed #245c45" }} /> Static (RF)</span>
-        <span><i className="mr-1 inline-block h-1.5 w-3 rounded bg-[#ea580c]" /> Dynamic (Mamba)</span>
       </div>
     </div>
   );

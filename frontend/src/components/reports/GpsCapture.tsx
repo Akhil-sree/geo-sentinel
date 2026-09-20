@@ -6,25 +6,25 @@ export default function GpsCapture({ onFix }: {
   const { fix, busy, error, acquire } = useGeolocation();
 
   const handle = async () => {
-    const f = await acquire();          // ← fresh value returned, not stale state
+    const f = await acquire();
     onFix(f);
   };
 
   return (
     <div>
-      <label className="block text-xs font-semibold text-slate-400">Location</label>
+      <label className="block text-[10px] font-medium text-gs-text-secondary">Location</label>
       <div className="mt-1 flex items-center gap-2">
         <button type="button" onClick={handle} disabled={busy}
-          className="rounded bg-slate-800 px-3 py-1.5 text-xs disabled:opacity-50">
+          className="rounded-card bg-gs-bg px-3 py-1.5 text-[11px] font-medium text-gs-text border border-gs-border transition hover:bg-gs-border/30 disabled:opacity-50">
           {busy ? "Acquiring…" : "📍 Get GPS"}
         </button>
         {fix && (
-          <span className="font-mono text-xs text-slate-300">
-            {fix.lat.toFixed(5)}, {fix.lng.toFixed(5)} <span className="text-slate-500">±{fix.accuracy}m</span>
+          <span className="text-[11px] text-gs-text">
+            {fix.lat.toFixed(5)}, {fix.lng.toFixed(5)} <span className="text-gs-text-secondary">±{fix.accuracy}m</span>
           </span>
         )}
       </div>
-      {error && <p className={`mt-1 text-xs ${fix ? "text-amber-400" : "text-red-400"}`}>{error}</p>}
+      {error && <p className={`mt-1 text-[10px] ${fix ? "text-risk-stressed" : "text-risk-critical"}`}>{error}</p>}
     </div>
   );
 }

@@ -12,7 +12,8 @@ export default function PhotoCapture({ onPhoto }: { onPhoto: (b: Blob | null) =>
     const problem = validateFile(f);
     if (problem) { setErr(problem); return; }
     try {
-      const blob = await compressImage(f);           // downscale + JPEG recompress
+      if (f.type.startsWith("video/")) { onPhoto(f); return; }
+      const blob = await compressImage(f);
       setPreview(URL.createObjectURL(blob));
       onPhoto(blob);
     } catch { setErr("Could not process this image"); }
@@ -20,12 +21,12 @@ export default function PhotoCapture({ onPhoto }: { onPhoto: (b: Blob | null) =>
 
   return (
     <div>
-      <label className="block text-xs font-semibold text-slate-400">Photo (optional)</label>
-      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onChange}
-        className="mt-1 w-full rounded border border-slate-700 bg-slate-900
-                   p-2 text-xs file:mr-2 file:rounded file:border-0 file:bg-sky-700 file:px-2 file:py-1" />
-      {preview && <img src={preview} alt="preview" className="mt-2 max-h-36 rounded" />}
-      {err && <p className="mt-1 text-xs text-red-400">{err}</p>}
+      <label className="block text-[10px] font-medium text-gs-text-secondary">Photo / video (optional, ≤25MB video)</label>
+      <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" onChange={onChange}
+        className="mt-1 w-full rounded-card border border-gs-border bg-white
+                   p-2 text-[11px] file:mr-2 file:rounded-card file:border-0 file:bg-forest file:px-2 file:py-1 file:text-white file:text-[10px] file:font-medium" />
+      {preview && <img src={preview} alt="preview" className="mt-2 max-h-36 rounded-card" />}
+      {err && <p className="mt-1 text-[10px] text-risk-critical">{err}</p>}
     </div>
   );
 }

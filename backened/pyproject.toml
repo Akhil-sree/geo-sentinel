@@ -1,0 +1,41 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long (handled by line-length)
+    "B008",  # do not perform function calls in argument defaults
+    "C408",  # do not use list/dict/set comprehensions
+    "SIM102", # nested if statements
+    "SIM103", # if/else returning True/False
+]
+per-file-ignores = {
+    "tests/*": ["S101", "B011"],  # assert in tests, assert False
+    "app/ml/*": ["S101"],  # assert in ML code
+    "scripts/*": ["S101", "T201"],  # assert and print in scripts
+}
+exclude = [
+    ".venv",
+    "__pycache__",
+    ".pytest_cache",
+    "node_modules",
+    "dist",
+    "build",
+    "*.egg-info",
+]
+
+[tool.ruff.isort]
+known-first-party = ["app"]
+import-headings = {
+    "std": "Standard Library",
+    "third": "Third Party",
+    "first": "First Party",
+}

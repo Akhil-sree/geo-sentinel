@@ -1,0 +1,8 @@
+{
+  "experiment": "gs_v1",
+  "seed": 42,
+  "split": "StratifiedGroupKFold-3 event/spatial groups",
+  "preprocessing": "none (trees); median-impute n/a \u2014 no NaNs",
+  "class_weight": "balanced_subsample",
+  "status": "EXPERIMENTAL"
+}

@@ -33,3 +33,41 @@ coverage/
 .idea/
 .DS_Store
 Thumbs.db
+
+# NER pipeline: large raw downloads + manual drops stay local.
+# (Already-committed small artifacts remain tracked; this covers new bulk.)
+backened/data/raw/*.pbf
+backened/data/raw/*.h5
+backened/data/raw/*.hdf5
+backened/data/raw/*.nc
+backened/data/raw/*.tif
+backened/data/raw/*.zip
+backened/data/raw/coolr_*.json
+backened/data/raw/ner_rain_*.json
+backened/data/raw/ner_dem_*.json
+backened/data/raw/ner_sar_*.json
+backened/data/raw/osm_zone_*.json
+backened/data/manual/
+backened/models/ner_*/
+
+# GEO-SENTINEL: raw datasets, generated pipeline outputs, experiment run
+# history, and model binaries stay local — never commit. Lightweight
+# metadata (registry/metrics/metadata/config JSON, docs) is committed.
+datasets/
+backened/data/raw/
+backened/data/processed/
+experiments/
+*.tif
+*.tiff
+*.pbf
+*.zip
+*.nc
+*.h5
+*.hdf5
+*.pt
+*.joblib
+*.npy
+*.npz
+*.parquet
+.venv/
+.ruff_cache/

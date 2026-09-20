@@ -1,0 +1,38 @@
+{
+ "at": "2026-09-15T19:37:42.884047+00:00",
+ "version": "ner_v2",
+ "gates": {
+  "split_uniqueness": "PASS",
+  "split_class_balance": "PASS",
+  "temporal_direction": "PASS",
+  "temporal_detail": "train_years=['2007', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018'] test_years=['2021']",
+  "control_split_integrity": "PASS",
+  "control_link_detail": [],
+  "no_label_feature": "PASS",
+  "all_none_columns": [
+   "rain_1h",
+   "rain_3h",
+   "rain_6h",
+   "rain_12h",
+   "rain_24h",
+   "rain_48h",
+   "rain_72h",
+   "rain_7d",
+   "rain_14d",
+   "rain_30d",
+   "rain_max_1h",
+   "rain_max_3h",
+   "rain_max_24h",
+   "rain_intensity",
+   "rain_trend",
+   "antecedent_7d",
+   "sar_pre_days",
+   "sar_post_days",
+   "sar_same_orbit"
+  ],
+  "no_silent_zeros": "PASS",
+  "road_vintage_tagged": "PASS",
+  "day_precision_cutoff": "PASS",
+  "overall": "PASS"
+ }
+}

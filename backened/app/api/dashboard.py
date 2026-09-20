@@ -29,12 +29,14 @@ def get_road_segments(db: Session = Depends(get_db)):
             "longitude": r.longitude,
         })
     blocked = sum(1 for r in roads if r["status"] != "OPEN")
+    from app.seed import GIS_META
     return {
         "roads": roads,
         "total": len(roads),
         "blocked": blocked,
         "open": len(roads) - blocked,
         "summary": f"{blocked} of {len(roads)} segments disrupted",
+        "provenance": {"source": GIS_META["roads"], "status": "STATIC"},
     }
 
 

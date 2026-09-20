@@ -1,6 +1,6 @@
 {
   "version": "rf_2026_01",
-  "training_date": "2026-08-27T22:30:16.817947+00:00",
+  "training_date": "2026-09-14T19:03:46.700209+00:00",
   "features_used": [
     "slope",
     "elevation_norm",
@@ -33,6 +33,10 @@
   },
   "cv_accuracy": 0.5,
   "cv_accuracy_std": 0.13608276348795434,
+  "cv_precision_macro": 0.1667,
+  "cv_recall_macro": 0.3333,
+  "cv_f1_macro": 0.2222,
+  "calibration": "uncalibrated \u2014 raw RF vote fractions; do not read as probability",
   "cv_scores": [
     0.6666666666666666,
     0.3333333333333333,

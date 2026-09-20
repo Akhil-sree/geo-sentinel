@@ -1,0 +1,24 @@
+{
+  "dataset_version": "events_v2",
+  "feature_version": "terrain6_v1",
+  "features": [
+    "slope",
+    "elevation_norm",
+    "ruggedness",
+    "road_proximity",
+    "drainage_proximity",
+    "settlement_density"
+  ],
+  "n_samples": 24,
+  "n_positive": 10,
+  "source_name": "GEO-SENTINEL seed demo inventory",
+  "source_url": "n/a (in-repo app/seed.py EVENTS, 10 events 2022-2024)",
+  "license": "demo synthetic \u2014 not for operational use",
+  "collection_date": "2026-07 (seed v1)",
+  "spatial_resolution": "zone-level (8 Meghalaya zones)",
+  "temporal_resolution": "zone-year (2022-2024)",
+  "preprocessing": "this script; static terrain only, SAR excluded (mock-leakage)",
+  "label_definition": "1 if >=1 recorded event in zone-year else 0",
+  "geographic_coverage": "Meghalaya, India (8 zones, 6 districts)",
+  "leakage_checks": "duplicate (zone,year): pass; district groups>=3: pass"
+}

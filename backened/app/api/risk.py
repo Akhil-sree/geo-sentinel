@@ -19,7 +19,7 @@ Provides:
 
 import datetime as dt
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -37,6 +37,20 @@ from ..ml.mamba_model import get_temporal_model
 
 
 router = APIRouter()
+
+
+def _require_zone(db: Session, zone_id: str) -> Zone:
+    """Shared 404 contract for every zone-scoped endpoint.
+
+    Unknown zones raise 404 (never HTTP-200 error-dicts); valid zones with
+    no observations keep their documented empty states (`state: empty`,
+    `[]`, `NO_DATA`). The global frontend banner ignores 404s, so a typo'd
+    zone must not flip the app to BACKEND UNAVAILABLE.
+    """
+    zone = db.get(Zone, zone_id)
+    if zone is None:
+        raise HTTPException(status_code=404, detail=f"zone not found: {zone_id}")
+    return zone
 
 
 # =============================================================
@@ -91,6 +105,72 @@ def zones(
     ]
 
 
+@router.get("/landslides/gsi")
+def gsi_slides():
+    """REAL GSI landslide inventory (865 Meghalaya slides, CC0-1.0).
+
+    Catalog occurrences with coordinates; year-or-unknown resolution —
+    for GIS display + spatial features, NOT temporal sequences.
+    """
+    import csv as _csv
+    import os as _os
+    fn = _os.path.join(_os.path.dirname(__file__), "..", "..", "data",
+                       "processed", "gsi_slides_meghalaya.csv")
+    if not _os.path.exists(fn):
+        return {"status": "UNAVAILABLE — run data/process_gsi.py",
+                "slides": []}
+    with open(fn, encoding="utf-8") as f:
+        rows = list(_csv.DictReader(f))
+    return {"status": "OBSERVED (GSI catalog, CC0-1.0 via bharatlas)",
+            "n": len(rows),
+            "note": "Occurrence catalog, year-or-unknown dating — display + "
+                    "spatial features only",
+            "slides": [{"id": int(r["slide_id"]), "lat": float(r["lat"]),
+                        "lng": float(r["lng"]), "district": r["district"],
+                        "year": int(r["year"]) or None,
+                        "trigger": r["trigger"], "activity": r["activity"]}
+                       for r in rows]}
+
+
+@router.get("/gis/provenance")
+def gis_provenance(db: Session = Depends(get_db)):
+    """Source/date/resolution/status for every GIS layer (Phase 5).
+
+    Response shape is fixed; layers stay STATIC until real village/road/
+    boundary/population datasets land.
+    """
+    from app.seed import TERRAIN_META, GIS_META
+    from app.providers.sentinel1 import SentinelSceneMetadataProvider
+    from app.models_db import TerrainDEM, SatScene
+    dem_n = db.query(TerrainDEM).count() if db else 0
+    try:
+        sat_n = db.query(SatScene).count() if db else 0
+    except Exception as e:
+        _log.getLogger("geo-sentinel").debug("SatScene count failed: %s", e)
+        sat_n = 0
+    sat = SentinelSceneMetadataProvider().scene_status()
+    sat["observed_catalog_records"] = sat_n
+    if sat_n:
+        sat["detail"] += (f" {sat_n} real S1 acquisition records (ASF "
+                          "discovery, metadata only — no imagery, no risk use).")
+    return {"terrain": TERRAIN_META, "gis": GIS_META,
+            "dem_observed": {"source": "SRTM GL1 30m via OpenTopodata",
+                             "resolution_m": 30,
+                             "zones_covered": dem_n,
+                             "status": "OBSERVED" if dem_n else "UNAVAILABLE",
+                             "note": ("150m-window derivatives; legacy STATIC "
+                                      "profiles remain authoritative for RF path")},
+            "satellite": sat,
+            "history": {"source": "seed demo inventory (10 events 2022-2024)",
+                        "status": "STATIC", "dataset_version": "events_v2",
+                        "gsi_catalog": "865 OBSERVED slides (CC0-1.0) at "
+                                       "/api/landslides/gsi + events_v3 spatial features"},
+            "temporal": {"dataset_version": "seq_real_v1",
+                         "source": "Open-Meteo archive ERA5 (rain observed "
+                                   "blend, soil MODELED), pre-event only",
+                         "status": "OBSERVED/MODELED"}}
+
+
 # =============================================================
 # RISK HISTORY
 # =============================================================
@@ -103,6 +183,7 @@ def risk_history(
     """
     Return historical risk scores for a zone.
     """
+    _require_zone(db, zone_id)
 
     rows = (
         db.query(RiskScore)
@@ -138,6 +219,7 @@ def zone_rainfall(
 
     Mock observations are explicitly marked as DEMO_DATA.
     """
+    _require_zone(db, zone_id)
 
     rows = (
         db.query(RainfallObservation)
@@ -190,6 +272,7 @@ def zone_soil(
     SMAP is a coarse regional proxy and is not an
     in-situ soil-moisture sensor.
     """
+    _require_zone(db, zone_id)
 
     rows = (
         db.query(SoilMoistureObservation)
@@ -235,11 +318,13 @@ def zone_soil(
 def zone_explanation(
     zone_id: str,
     t: int = Query(168, ge=24, le=168),
+    db: Session = Depends(get_db),
 ):
     """
     Return risk score, severity, drivers and explanation
     for a zone at the requested simulated time.
     """
+    _require_zone(db, zone_id)
 
     results = sim.run_pipeline(t)
 
@@ -253,9 +338,7 @@ def zone_explanation(
     )
 
     if not result:
-        return {
-            "error": "zone not found"
-        }
+        raise HTTPException(status_code=404, detail=f"zone not found: {zone_id}")
 
     return {
         "risk_score": result["risk_score"],
@@ -280,12 +363,7 @@ def zone_sar(
     SAR change score.
     """
 
-    z = db.get(Zone, zone_id)
-
-    if z is None:
-        return {
-            "error": "zone not found"
-        }
+    z = _require_zone(db, zone_id)
 
     return {
         "acquisition_date": z.sar_acquisition_date,
@@ -293,10 +371,14 @@ def zone_sar(
             z.sar_previous_acquisition_date
         ),
         "change_score": z.sar_change_score,
+        "status": "SATELLITE_DEMO — mock value, excluded from production risk scoring",
+        "is_live": False,
+        "is_simulated": True,
         "honesty_note": (
             "Sentinel-1 is a periodic sensor — "
             "this is NOT live monitoring. "
-            "Missing SAR is never treated as zero change."
+            "Missing SAR is never treated as zero change. "
+            "No live satellite provider is configured (SATELLITE_LIVE=false)."
         ),
     }
 
@@ -336,10 +418,93 @@ def landslides(
 
 
 # =============================================================
+# LANDSLIDE INVENTORY (spatial vs temporal split)
+# =============================================================
+
+@router.get("/landslides/inventory")
+def landslide_inventory(db: Session = Depends(get_db)):
+    """Provenance-tracked inventory split.
+
+    temporal: dated events (landslide_events) — MAY train temporal models.
+    spatial:  year-unknown occurrences (spatial_inventory + GSI CSV) —
+              GIS/spatial-prior ONLY, never temporal labels.
+    """
+    from ..models_db import SpatialInventory
+    temporal = (db.query(LandslideEvent).order_by(LandslideEvent.event_date).all())
+    spatial = (db.query(SpatialInventory).limit(500).all())
+    return {
+        "temporal": {
+            "n": len(temporal), "use": "temporal training labels (dated)",
+            "events": [{"zone_id": e.zone_id,
+                        "event_date": e.event_date.isoformat() if e.event_date else None,
+                        "type": e.landslide_type, "source": e.source,
+                        "confidence": getattr(e, "confidence", None)} for e in temporal],
+        },
+        "spatial": {
+            "n": len(spatial), "use": "GIS display + spatial prior ONLY — never temporal labels",
+            "records": [{"lat": r.latitude, "lng": r.longitude,
+                         "district": r.district, "source": r.source,
+                         "data_quality": r.data_quality} for r in spatial],
+        },
+        "provenance": "Every record carries source + data_quality; spatial-only rows are query-separated by table",
+    }
+
+
+@router.get("/risk/{zone_id}/rainfall-windows")
+def zone_rainfall_windows(zone_id: str, db: Session = Depends(get_db)):
+    """Normalized rainfall windows: 1/3/6/12/24/72h, 7d cumulative,
+    intensity, antecedent — with Observed/Modeled/Scenario labeling."""
+    _require_zone(db, zone_id)
+    import pandas as pd
+    from ..ml.features import compute_rainfall_features
+    rows = (db.query(RainfallObservation)
+            .filter(RainfallObservation.zone_id == zone_id)
+            .order_by(RainfallObservation.timestamp).all())
+    if not rows:
+        return {"zone_id": zone_id, "state": "empty",
+                "detail": "No rainfall observations — run ingestion first"}
+    df = pd.DataFrame([{"timestamp": r.timestamp,
+                        "rainfall_mm_per_hr": r.rainfall_mm_per_hr} for r in rows])
+    feats = compute_rainfall_features(df)
+    src = rows[-1].source or ""
+    kind = ("Observed" if "LIVE" in (rows[-1].quality_flag or "") or "OPENMETEO" in src
+            else "Modeled" if "MODELED" in src else "Scenario" if "SIM" in src or "MOCK" in src
+            else "Observed")
+    return {"zone_id": zone_id, "state": "ok", "data_kind": kind,
+            "windows_mm": {k: round(feats[k], 2) for k in
+                           ("rainfall_1h", "rainfall_3h", "rainfall_6h", "rainfall_12h",
+                            "rainfall_24h", "rainfall_72h", "rainfall_7d")},
+            "intensity_mm_per_hr": round(feats["rainfall_rate"], 2),
+            "antecedent_7d_mm": round(feats["antecedent_rainfall"], 2),
+            "trend": round(feats["rainfall_slope"], 3),
+            "acceleration": round(feats["rainfall_acceleration"], 3),
+            "source": src, "quality_flag": rows[-1].quality_flag,
+            "forecast_note": "Forecast values come from Open-Meteo forecast_days=1 when RAIN_PROVIDER=openmeteo; otherwise Scenario (synthetic)"}
+
+
+@router.get("/exposure/villages")
+def exposure_villages(db: Session = Depends(get_db)):
+    """Village + infrastructure exposure registry (STATIC indicative demo data)."""
+    from ..models_db import Village, Infrastructure
+    villages = db.query(Village).all()
+    infra = db.query(Infrastructure).all()
+    return {
+        "status": "STATIC — indicative demo registry, not census",
+        "villages": [{"name": v.name, "zone_id": v.zone_id, "lat": v.latitude,
+                      "lng": v.longitude, "population": v.population,
+                      "criticality": v.criticality} for v in villages],
+        "infrastructure": [{"name": i.name, "kind": i.kind, "zone_id": i.zone_id,
+                            "lat": i.latitude, "lng": i.longitude,
+                            "criticality": i.criticality} for i in infra],
+    }
+
+
+# =============================================================
 # MODEL STATUS
 # =============================================================
 
 @router.get("/model/status")
+@router.get("/risk/model/status")
 def model_status():
     """
     Return the status of the temporal model and
@@ -435,15 +600,17 @@ def _compute_slope_state(
 def slope_state(
     zone_id: str,
     t: int = Query(168, ge=24, le=168),
+    db: Session = Depends(get_db),
 ):
     """Return interpretable slope state for a zone."""
+    _require_zone(db, zone_id)
     results = sim.run_pipeline(t)
     result = next(
         (r for r in results if r["zone_id"] == zone_id),
         None,
     )
     if not result:
-        return {"error": "zone not found"}
+        raise HTTPException(status_code=404, detail=f"zone not found: {zone_id}")
 
     state = _compute_slope_state(
         result["static_score"],
@@ -473,6 +640,7 @@ def risk_trajectory(
     db: Session = Depends(get_db),
 ):
     """Return historical risk trajectory with state transitions."""
+    _require_zone(db, zone_id)
     rows = (
         db.query(RiskScore)
         .filter(RiskScore.zone_id == zone_id)
@@ -607,6 +775,13 @@ def hotspot_ranking(
     db: Session = Depends(get_db),
 ):
     """Return ranked spatiotemporal hotspots."""
+    # Fresh pipeline values for rainfall/soil context (RiskScore rows don't store them)
+    try:
+        pipe = {r["zone_id"]: r for r in sim.run_pipeline(t)}
+    except Exception as e:
+        _log.getLogger("geo-sentinel").warning(
+            "Pipeline run failed for hotspot ranking: %s", e)
+        pipe = {}
     # Query latest RiskScore per zone (pipeline must have run via /risk/map first)
     zones = db.query(Zone).all()
     ranked = []
@@ -643,12 +818,17 @@ def hotspot_ranking(
 
         sar_change = z.sar_change_score or 0.0
 
+        live = pipe.get(z.id) or {}
+        rain_72h = float(live.get("rainfall_72h", 0.0) or 0.0)
+        rain_24h = float(live.get("rainfall_24h", 0.0) or 0.0)
+        soil = float(live.get("soil_moisture", 0.0) or 0.0)
+
         hotspot = _classify_hotspot(
             latest.risk_score,
             latest.static_score,
             latest.dynamic_score,
             interp,
-            0.0,  # rainfall_72h not in RiskScore, use 0
+            rain_72h,
             sar_change,
         )
 
@@ -660,9 +840,9 @@ def hotspot_ranking(
             "severity": latest.severity,
             "static_score": latest.static_score,
             "dynamic_score": latest.dynamic_score,
-            "rainfall_24h": 0.0,
-            "rainfall_72h": 0.0,
-            "soil_moisture": 0.0,
+            "rainfall_24h": round(rain_24h, 1),
+            "rainfall_72h": round(rain_72h, 1),
+            "soil_moisture": round(soil, 3),
             "escalated": latest.escalated,
             "sar_change_score": sar_change,
             "trajectory_interpretation": interp,
@@ -679,9 +859,7 @@ def hotspot_ranking(
     return {
         "hotspots": ranked,
         "total": len(ranked),
-        "analyzed_at": (
-            dt.datetime(2026, 7, 14) + dt.timedelta(hours=t)
-        ).isoformat(),
+        "analyzed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
     }
 
 
@@ -763,9 +941,7 @@ def scenario_simulation(req: ScenarioRequest):
         },
         "results": simulated,
         "warning": "WHAT-IF SIMULATION — not a forecast. Proxy scenario only.",
-        "simulated_at": (
-            dt.datetime(2026, 7, 14) + dt.timedelta(hours=req.t)
-        ).isoformat(),
+        "simulated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
     }
 
 
@@ -791,15 +967,15 @@ def risk_intensification(
         if not latest:
             continue
 
-        # Get previous score (12h ago if available)
+        # Get previous score (12h ago if available). RiskScore rows use the
+        # scenario clock, so compare against the centralized sim epoch.
+        from app.services.sim import BASE as SIM_EPOCH
         prev_t = max(24, t - 12)
         prev_rows = (
             db.query(RiskScore)
             .filter(
                 RiskScore.zone_id == z.id,
-                RiskScore.timestamp <= (
-                    dt.datetime(2026, 7, 14) + dt.timedelta(hours=prev_t)
-                ),
+                RiskScore.timestamp <= (SIM_EPOCH + dt.timedelta(hours=prev_t)),
             )
             .order_by(RiskScore.timestamp.desc())
             .limit(1)
@@ -841,9 +1017,7 @@ def risk_intensification(
 
     return {
         "intensification": intensified,
-        "compared_at": (
-            dt.datetime(2026, 7, 14) + dt.timedelta(hours=t)
-        ).isoformat(),
+        "compared_at": dt.datetime.now(dt.timezone.utc).isoformat(),
     }
 
 
@@ -858,15 +1032,14 @@ def zone_evidence(
     db: Session = Depends(get_db),
     ):
     """Return combined evidence for a zone: risk, rainfall, soil, SAR, drivers."""
+    zone = _require_zone(db, zone_id)
     results = sim.run_pipeline(t)
     result = next(
         (r for r in results if r["zone_id"] == zone_id),
         None,
     )
     if not result:
-        return {"error": "zone not found"}
-
-    zone = db.get(Zone, zone_id)
+        raise HTTPException(status_code=404, detail=f"zone not found: {zone_id}")
 
     # Slope state
     state = _compute_slope_state(
@@ -894,6 +1067,25 @@ def zone_evidence(
     # Risk explanation
     explanation = _generate_risk_explanation(result, zone, state)
 
+    # Drilldown completeness (Phase 12): history, vulnerable roads,
+    # active alerts, and data freshness alongside the scores.
+    from app.models_db import (LandslideEvent, RoadSegment, Alert,
+                               RainfallObservation, SoilMoistureObservation)
+    events = (db.query(LandslideEvent)
+              .filter(LandslideEvent.zone_id == zone_id)
+              .order_by(LandslideEvent.event_date.desc()).all())
+    roads = (db.query(RoadSegment)
+             .filter((RoadSegment.from_zone == zone_id) |
+                     (RoadSegment.to_zone == zone_id)).all())
+    active_alerts = (db.query(Alert).filter(Alert.zone_id == zone_id)
+                     .order_by(Alert.created_at.desc()).limit(5).all())
+    last_rain = (db.query(RainfallObservation)
+                 .filter(RainfallObservation.zone_id == zone_id)
+                 .order_by(RainfallObservation.timestamp.desc()).first())
+    last_soil = (db.query(SoilMoistureObservation)
+                 .filter(SoilMoistureObservation.zone_id == zone_id)
+                 .order_by(SoilMoistureObservation.timestamp.desc()).first())
+
     return {
         "zone_id": zone_id,
         "name": result["name"],
@@ -916,12 +1108,57 @@ def zone_evidence(
             "elevation": zone.elevation if zone else None,
             "ruggedness": zone.ruggedness if zone else None,
             "population": zone.population if zone else None,
+            "dem_observed": _dem_block(db, zone_id),
+        },
+        "history": [{"event_date": e.event_date.isoformat()
+                     if e.event_date else None,
+                     "type": e.landslide_type, "source": e.source}
+                    for e in events],
+        "vulnerable_roads": [{"name": r.name, "status": r.status,
+                              "blockage_reason": r.blockage_reason,
+                              "length_km": r.length_km}
+                             for r in roads if r.status != "OPEN"],
+        "active_alerts": [{"severity": a.severity, "status": a.status,
+                           "at": a.created_at.isoformat()
+                           if a.created_at else None}
+                          for a in active_alerts],
+        "freshness": {
+            "rainfall": {"observed_at": last_rain.timestamp.isoformat()
+                         if last_rain and last_rain.timestamp else None,
+                         "source": last_rain.source if last_rain else None,
+                         "quality": last_rain.quality_flag if last_rain else None},
+            "soil_moisture": {"observed_at": last_soil.timestamp.isoformat()
+                              if last_soil and last_soil.timestamp else None,
+                              "source": last_soil.source if last_soil else None,
+                              "quality": last_soil.quality_flag if last_soil else None},
         },
         "drivers": result["drivers"],
         "explanation": explanation,
         "model_versions": result["model_versions"],
         "sim_time": result["sim_time"],
     }
+
+
+def _dem_block(db, zone_id: str) -> dict | None:
+    """Observed DEM derivatives (SRTM 30m) alongside STATIC seed profiles."""
+    from app.models_db import TerrainDEM
+    try:
+        r = db.get(TerrainDEM, zone_id)
+    except Exception as e:
+        _log.getLogger("geo-sentinel").debug("TerrainDEM lookup failed: %s", e)
+        return None
+    if r is None or r.elevation_m is None:
+        return {"status": "UNAVAILABLE — run scripts/fetch_dem.py"}
+    return {"status": "OBSERVED", "source": r.dem_source,
+            "resolution_m": r.resolution_m,
+            "resolution_note": "SRTM GL1 30m; 5x5-window derivatives (~150m); cell grids 9x9@250m",
+            "elevation_m": r.elevation_m, "slope_deg": r.slope_deg,
+            "aspect_deg": r.aspect_deg, "ruggedness_m": r.ruggedness_m,
+            "relief_m": r.relief_m,
+            "curvature": (round(r.ruggedness_m / max(r.relief_m, 1.0), 4)
+                          if r.ruggedness_m is not None and r.relief_m else None),
+            "curvature_kind": "ESTIMATED convexity proxy (ruggedness/relief) — not a full-raster curvature product",
+            "note": "150m-window local derivatives; seed profiles unchanged"}
 
 
 def _generate_risk_explanation(result, zone, state):
@@ -1028,15 +1265,65 @@ def _perturb_features(zone, dist_km, rng):
     ]
 
 
+def _observed_cells(zone_id: str, stride: int = 1):
+    """Real DEM cells: 9x9 SRTM grid → per-cell slope (Horn), elevation,
+    local ruggedness. Returns (cells, meta) or (None, reason). No synthesis:
+    missing elevations drop the cell."""
+    import json as _json
+    import math as _math
+    import os as _os
+    import re as _re
+    import numpy as _np
+    # P2: zone_id is user-controlled — allowlist it so `../` or absolute
+    # paths can never escape data/raw.
+    if not _re.match(r"^[A-Za-z0-9][A-Za-z0-9_-]*$", zone_id or ""):
+        return None, "unknown zone"
+    _base = _os.path.normpath(_os.path.join(_os.path.dirname(__file__), "..",
+                                            "..", "data", "raw"))
+    fn = _os.path.normpath(_os.path.join(_base, f"demgrid_{zone_id}.json"))
+    if _os.path.dirname(fn) != _base or not _os.path.isfile(fn):
+        return None, "no DEM grid — run scripts/fetch_demgrid.py"
+    with open(fn, encoding="utf-8") as _f:
+        g = _json.load(_f)
+    n, step = g["n"], g["step_m"]
+    elev = _np.asarray(g["elev"], dtype=float).reshape(n, n)
+    lats = _np.asarray(g["lats"]).reshape(n, n)
+    lngs = _np.asarray(g["lngs"]).reshape(n, n)
+    cells = []
+    for i in range(1, n - 1, stride):
+        for j in range(1, n - 1, stride):
+            c = elev[i - 1:i + 2, j - 1:j + 2]
+            if _np.isnan(c).any():
+                continue  # drop, never interpolate silently
+            dzdx = ((c[0, 2] + 2 * c[1, 2] + c[2, 2])
+                    - (c[0, 0] + 2 * c[1, 0] + c[2, 0])) / (8 * step)
+            dzdy = ((c[2, 0] + 2 * c[2, 1] + c[2, 2])
+                    - (c[0, 0] + 2 * c[0, 1] + c[0, 2])) / (8 * step)
+            slope = _math.degrees(_math.atan(_math.hypot(dzdx, dzdy)))
+            cells.append({"lat": float(lats[i, j]), "lng": float(lngs[i, j]),
+                          "dist_km": 0.0, "slope_dem": slope,
+                          "elev_dem": float(elev[i, j]),
+                          "rugged_dem": float(c.std())})
+    meta = {"dataset": g["dataset"], "step_m": step, "grid": f"{n}x{n}",
+            "stride": stride}
+    return cells, meta
+
+
 @router.get("/risk/{zone_id}/cell-grid")
 def cell_risk_grid(
     zone_id: str,
     t: int = Query(168, ge=24, le=168),
     resolution: int = Query(20, ge=10, le=30),
+    mode: str = Query("observed", description="observed (real DEM), legacy (seeded noise), or demo (slope-driven illustration)"),
     db: Session = Depends(get_db),
 ):
     """
     Per-cell risk grid for the flagship zone deep-dive.
+    mode=observed (default): real SRTM cells (slope/elevation/ruggedness
+    from the zone DEM grid; road/drain/settlement are zone context).
+    mode=legacy: seeded-noise perturbation (reproducible demo, labeled).
+    mode=demo: observed cells with slope-driven display spread so the
+    demo map shows spatial variation (labeled DEMO SCENARIO, not a prediction).
     Runs the trained RF model on each terrain cell independently.
     """
     import numpy as np
@@ -1044,11 +1331,11 @@ def cell_risk_grid(
 
     zone = db.query(Zone).filter(Zone.id == zone_id).first()
     if not zone:
-        return {"error": "zone not found", "cells": []}
+        raise HTTPException(status_code=404, detail="zone not found")
 
     rf = RFModel()
     if not rf.available():
-        return {"error": "RF model not trained", "cells": []}
+        raise HTTPException(status_code=503, detail="RF model not trained")
 
     # Run pipeline to get dynamic score and environmental context
     results = sim.run_pipeline(t)
@@ -1057,55 +1344,143 @@ def cell_risk_grid(
     rainfall_72h = zone_result["rainfall_72h"] if zone_result else 0.0
     soil_moisture = zone_result["soil_moisture"] if zone_result else 0.3
 
-    # Generate hex grid
-    lat = float(zone.latitude)
-    lng = float(zone.longitude)
-    cell_size_km = 8.0 / resolution  # roughly covers 4km radius
-    grid = _generate_hex_grid(lat, lng, radius_km=3.5, cell_size_km=cell_size_km)
+    if mode == "legacy":
+        # Generate hex grid
+        lat = float(zone.latitude)
+        lng = float(zone.longitude)
+        cell_size_km = 8.0 / resolution  # roughly covers 4km radius
+        grid = _generate_hex_grid(lat, lng, radius_km=3.5, cell_size_km=cell_size_km)
+        dem_meta = None
+        cell_method = "legacy seeded-noise perturbation (demo)"
+        use_observed = False
+    else:
+        # observed AND demo both use real DEM geometry; demo only changes display spread
+        grid, dem_meta = _observed_cells(zone_id, stride=1 if resolution >= 18 else 2)
+        if grid is None:
+            if mode == "demo":
+                lat = float(zone.latitude)
+                lng = float(zone.longitude)
+                cell_size_km = 8.0 / resolution
+                grid = _generate_hex_grid(lat, lng, radius_km=3.5, cell_size_km=cell_size_km)
+                dem_meta = None
+                use_observed = False
+            else:
+                return {"error": dem_meta, "cells": []}
+        else:
+            use_observed = True
+        cell_method = (
+            "demo slope-driven illustration (DEMO SCENARIO — not a prediction)"
+            if mode == "demo" else
+            f"observed-DEM ({dem_meta['dataset']}, {dem_meta['grid']}@{dem_meta['step_m']}m)"
+        )
 
     rng = np.random.RandomState(42)  # reproducible
 
-    cells = []
+    # Feature rows first (same order → identical rng stream), then ONE
+    # batched predict_proba: same outputs as per-cell calls, ~48x faster.
+    feat_rows = []
     for cell in grid:
-        features = _perturb_features(zone, cell["dist_km"], rng)
-        pred = rf.model.predict_proba([features])[0]
-        classes = list(rf.model.classes_)
+        if use_observed:
+            feat_rows.append([
+                max(0, min(60, cell["slope_dem"])),
+                max(0, min(1.0, cell["elev_dem"] / 2000.0)),
+                max(0, min(1.0, cell["rugged_dem"] / 15.0)),
+                float(zone.road_proximity),
+                float(zone.drainage_proximity),
+                float(zone.settlement_density),
+                0.15,  # SAR neutral (quarantined)
+            ])
+        else:
+            feat_rows.append(_perturb_features(zone, cell["dist_km"], rng))
+    proba_all = rf.model.predict_proba(feat_rows)
+    classes = list(rf.model.classes_)
+
+    # Demo display spread: per-cell slope normalized across THIS grid.
+    # Grounded in real observed slope (or the perturbed slope feature),
+    # anchored to the zone's dynamic level, seeded per zone (reproducible).
+    demo_slopes = None
+    demo_rng = None
+    demo_anchor = None
+    if mode == "demo":
+        if use_observed:
+            demo_slopes = [cell["slope_dem"] for cell in grid]
+        else:
+            demo_slopes = [row[0] for row in feat_rows]
+        demo_rng = np.random.RandomState(abs(hash(zone_id)) % (2 ** 31))
+        demo_anchor = min(0.95, max(0.05, dynamic_score))
+
+    from ..ml.fusion import fuse, classify
+
+    cells = []
+    for ci, (cell, pred) in enumerate(zip(grid, proba_all)):
         static_score = sum(p * c / 2.0 for p, c in zip(pred, classes))
         static_score = min(1.0, max(0.0, static_score))
 
         # Combine with dynamic for fused risk
-        from ..ml.fusion import fuse
+        soil_cell = (soil_moisture if use_observed
+                     else min(0.95, soil_moisture + rng.normal(0, 0.05)))
         fusion = fuse(
             static_score, dynamic_score,
             rainfall_72h * max(0.3, 1.0 - cell["dist_km"] / 5.0),
             rainfall_72h,
-            min(0.95, soil_moisture + rng.normal(0, 0.05)),
+            soil_cell,
         )
+
+        risk_score = fusion["risk_score"]
+        severity = fusion["severity"]
+        escalated = fusion["escalated"]
+        if mode == "demo":
+            lo, hi = min(demo_slopes), max(demo_slopes)
+            s_norm = (demo_slopes[ci] - lo) / (hi - lo) if hi > lo else 0.5
+            jitter = demo_rng.normal(0, 0.02)
+            risk_score = round(min(0.98, max(0.05,
+                demo_anchor * 0.45 + (0.10 + 0.85 * s_norm) * 0.55 + jitter)), 4)
+            severity = classify(risk_score)
 
         # Slope state
         state = _compute_slope_state(
-            static_score, dynamic_score, fusion["risk_score"],
-            rainfall_72h, soil_moisture, fusion["escalated"],
+            static_score, dynamic_score, risk_score,
+            rainfall_72h, soil_moisture, escalated,
         )
 
-        cells.append({
+        entry = {
             "lat": cell["lat"],
             "lng": cell["lng"],
             "static_score": round(static_score, 4),
-            "risk_score": round(fusion["risk_score"], 4),
-            "severity": fusion["severity"],
+            "risk_score": risk_score,
+            "severity": severity,
             "slope_state": state["state"],
             "slope_state_color": state["color"],
             "stress_score": round(state["stress_score"], 4),
-            "escalated": fusion["escalated"],
-        })
+            "escalated": escalated,
+        }
+        if use_observed:
+            entry["slope_dem_deg"] = round(cell["slope_dem"], 2)
+            entry["elev_dem_m"] = round(cell["elev_dem"], 1)
+        cells.append(entry)
 
+    statics = {c["static_score"] for c in cells}
+    if mode == "demo":
+        resolution_note = (
+            "DEMO SCENARIO — display spread driven by observed per-cell slope, "
+            "anchored to the zone advisory level; illustrative, not a prediction.")
+    else:
+        resolution_note = (
+            "Observed SRTM cells carry real per-cell slope/elevation, but the "
+            "zone-scale RF assigns identical leaves at this resolution "
+            f"({len(statics)} distinct static value(s)) — the grid exposes "
+            "the model's sub-zone blindness honestly; finer discrimination "
+            "needs denser inventory + retraining, not interpolation.")
     return {
         "zone_id": zone_id,
         "name": zone.name,
         "cell_count": len(cells),
         "resolution": resolution,
+        "cell_method": cell_method,
+        "dem": dem_meta,
+        "demo": mode == "demo",
         "cells": cells,
+        "resolution_note": resolution_note,
     }
 
 
@@ -1118,10 +1493,13 @@ def temporal_cell_grid(
     zone_id: str,
     db: Session = Depends(get_db),
     resolution: int = Query(12, ge=8, le=16),
+    mode: str = Query("observed", description="observed (model output) or demo (slope-driven illustration)"),
 ):
     """
     Per-cell risk at multiple timesteps for temporal animation.
     Returns cell grids at T-72h, T-48h, T-24h, NOW.
+    mode=demo spreads cells by per-cell slope so the
+    animation shows variation (DEMO SCENARIO — not a prediction).
     Optimized: runs pipeline once per unique timestep, uses batch RF prediction.
     """
     import numpy as np
@@ -1129,7 +1507,7 @@ def temporal_cell_grid(
 
     zone = db.query(Zone).filter(Zone.id == zone_id).first()
     if not zone:
-        return {"error": "zone not found", "timesteps": []}
+        raise HTTPException(status_code=404, detail=f"zone not found: {zone_id}")
 
     rf = RFModel()
     if not rf.available():
@@ -1151,7 +1529,13 @@ def temporal_cell_grid(
     classes = list(rf.model.classes_)
     static_vec = np.array([min(1.0, max(0.0, sum(p * c / 2.0 for p, c in zip(proba, classes)))) for proba in static_scores])
 
-    from ..ml.fusion import fuse
+    from ..ml.fusion import fuse, classify
+
+    demo_slopes = None
+    if mode == "demo":
+        slopes = list(base_features[:, 0])
+        lo, hi = min(slopes), max(slopes)
+        demo_slopes = [(s - lo) / (hi - lo) if hi > lo else 0.5 for s in slopes]
 
     timesteps_data = []
     for ti, (t_val, t_label) in enumerate(zip(timesteps, t_labels)):
@@ -1162,6 +1546,8 @@ def temporal_cell_grid(
         soil_moisture = zone_result["soil_moisture"] if zone_result else 0.3
 
         rng = np.random.RandomState(42 + ti)
+        demo_rng = np.random.RandomState(abs(hash((zone_id, ti))) % (2 ** 31)) if mode == "demo" else None
+        demo_anchor = min(0.95, max(0.05, dynamic_score)) if mode == "demo" else None
         cells = []
         for ci, cell in enumerate(grid):
             soil_proj = min(0.95, soil_moisture + rng.normal(0, 0.03))
@@ -1171,15 +1557,24 @@ def temporal_cell_grid(
                 float(static_vec[ci]), dynamic_score,
                 rain_local, rainfall_72h, soil_proj,
             )
+            risk_score = fusion["risk_score"]
+            severity = fusion["severity"]
+            escalated = fusion["escalated"]
+            if mode == "demo":
+                jitter = demo_rng.normal(0, 0.02)
+                risk_score = round(min(0.98, max(0.05,
+                    demo_anchor * 0.45 + (0.10 + 0.85 * demo_slopes[ci]) * 0.55 + jitter)), 4)
+                severity = classify(risk_score)
             state = _compute_slope_state(
-                float(static_vec[ci]), dynamic_score, fusion["risk_score"],
-                rainfall_72h, soil_proj, fusion["escalated"],
+                float(static_vec[ci]), dynamic_score, risk_score,
+                rainfall_72h, soil_proj, escalated,
             )
 
             cells.append({
                 "lat": cell["lat"],
                 "lng": cell["lng"],
-                "risk_score": round(fusion["risk_score"], 4),
+                "risk_score": risk_score,
+                "severity": severity,
                 "slope_state": state["state"],
                 "slope_state_color": state["color"],
                 "stress_score": round(state["stress_score"], 4),
@@ -1194,6 +1589,10 @@ def temporal_cell_grid(
     return {
         "zone_id": zone_id,
         "name": zone.name,
+        "cell_method": (
+            "demo slope-driven illustration (DEMO SCENARIO — not a prediction)"
+            if mode == "demo" else "model output per cell"),
+        "demo": mode == "demo",
         "timesteps": timesteps_data,
     }
 
@@ -1214,15 +1613,13 @@ def weather_forecast(
     """
     import math
 
-    zone = db.query(Zone).filter(Zone.id == zone_id).first()
-    if not zone:
-        return {"error": "zone not found"}
+    zone = _require_zone(db, zone_id)
 
     # Run current pipeline for baseline
     results = sim.run_pipeline(t)
     zone_result = next((r for r in results if r["zone_id"] == zone_id), None)
     if not zone_result:
-        return {"error": "no data"}
+        raise HTTPException(status_code=404, detail=f"zone not found: {zone_id}")
 
     # Synthetic forecast: extend storm pattern forward
     base_rain_24h = zone_result["rainfall_24h"]
@@ -1325,6 +1722,23 @@ def emergency_priorities(
     """
     results = sim.run_pipeline(t)
 
+    from app.models_db import CitizenReport as _CR
+    import math as _m
+    open_reports = db.query(_CR).filter(
+        _CR.status.in_(["PENDING", "VERIFIED"])).all()
+
+    def _near(lat, lng, max_km=30.0):
+        n = 0
+        for rep in open_reports:
+            if rep.latitude is None:
+                continue
+            a = (_m.sin(_m.radians(rep.latitude - lat) / 2) ** 2
+                 + _m.cos(_m.radians(lat)) * _m.cos(_m.radians(rep.latitude))
+                 * _m.sin(_m.radians(rep.longitude - lng) / 2) ** 2)
+            if 2 * 6371.0 * _m.asin(_m.sqrt(a)) <= max_km:
+                n += 1
+        return n
+
     priorities = []
     for r in results:
         zone = db.query(Zone).filter(Zone.id == r["zone_id"]).first()
@@ -1372,6 +1786,25 @@ def emergency_priorities(
             evac_status = "BLOCKED RISK"
             evac_color = "#ba1a1a"
 
+        # Why-this-rank reasons (Phase 23): each urgency term explained
+        nearby_reports = _near(zone.latitude, zone.longitude)
+        reasons = []
+        if r["risk_score"] >= 0.55:
+            reasons.append(f"HIGH hazard (risk {r['risk_score']:.2f})")
+        elif r["risk_score"] >= 0.4:
+            reasons.append(f"elevated hazard (risk {r['risk_score']:.2f})")
+        if pop_norm >= 0.3:
+            reasons.append(f"high exposed population ({zone.population})")
+        if road_inv >= 0.5:
+            reasons.append("hard to reach (low road proximity)")
+        if r["escalated"]:
+            reasons.append("extreme-event escalation active")
+        if nearby_reports:
+            reasons.append(f"{nearby_reports} unverified field report(s) "
+                           "within 30km")
+        if not reasons:
+            reasons.append("routine monitoring — no acute drivers")
+
         priorities.append({
             "zone_id": r["zone_id"],
             "name": r["name"],
@@ -1385,6 +1818,7 @@ def emergency_priorities(
             "population": zone.population,
             "road_proximity": zone.road_proximity,
             "urgency_score": round(urgency, 4),
+            "reasons": reasons,
             "tier": tier,
             "tier_color": tier_color,
             "response_time": response_time,
@@ -1401,7 +1835,5 @@ def emergency_priorities(
     return {
         "priorities": priorities,
         "total": len(priorities),
-        "analyzed_at": (
-            dt.datetime(2026, 7, 14) + dt.timedelta(hours=t)
-        ).isoformat(),
+        "analyzed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
     }

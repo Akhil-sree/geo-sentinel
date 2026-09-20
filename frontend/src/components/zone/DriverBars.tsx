@@ -5,14 +5,14 @@ export default function DriverBars({ drivers }: { drivers: Driver[] }) {
   return (
     <div className="space-y-2">
       {drivers.map((d) => (
-        <div key={d.factor} className="flex items-center gap-2 text-xs">
-          <span className="w-52 shrink-0 text-slate-400">{d.factor}</span>
-          <div className="h-2 flex-1 rounded bg-slate-800">
-            <div className="h-2 rounded bg-gradient-to-r from-sky-600 to-orange-500"
+        <div key={d.factor} className="flex items-center gap-2 text-[10px]">
+          <span className="w-52 shrink-0 text-gs-text-secondary">{d.factor}</span>
+          <div className="h-1.5 flex-1 rounded-full bg-gs-border">
+            <div className="h-1.5 rounded-full bg-gradient-to-r from-forest to-risk-degrading"
                  style={{ width: `${(d.impact / max) * 100}%` }} />
           </div>
-          <span className="w-16 text-right font-mono text-slate-500">
-            {d.impact > 0.6 ? "HIGH" : d.impact > 0.3 ? "MODERATE" : "LOW"}
+          <span className="w-16 text-right font-medium text-gs-text-secondary">
+            {d.impact > 0.6 ? "High" : d.impact > 0.3 ? "Moderate" : "Low"}
           </span>
         </div>
       ))}

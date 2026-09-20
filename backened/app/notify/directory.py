@@ -31,6 +31,6 @@ def get_directory() -> dict[str, list[dict]]:
 
 
 def _recips(zone: str) -> list[dict]:
-    base = zone.split("-", 1)[1].title()
+    base = zone.split("-", 1)[1].title() if "-" in zone else zone
     return [{"name": f"{base} Recipient 1", "lang": "en"},
             {"name": f"{base} Recipient 2", "lang": "hi"}]

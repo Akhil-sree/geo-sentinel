@@ -6,9 +6,15 @@ python-multipart==0.0.9
 scikit-learn==1.5.0
 numpy==1.26.4
 pandas==2.2.2
-shapely==2.0.4
 pyyaml==6.0.1
 pytest==8.2.2
 httpx==0.27.0          # test client
+Pillow>=10.0.0,<13.0.0        # vision: image processing (verified 11.0.0)
+scipy>=1.11.0,<1.18.0          # vision: morphological cleanup (verified 1.17.1)
+cryptography>=41.0.0,<51.0.0   # SecretBox: Fernet encryption (verified 50.0.0)
+psycopg2-binary==2.9.9 # prod profile: Postgres/PostGIS via DATABASE_URL (3.x never existed under this name)
+redis==5.0.1         # prod: shared rate-limit store (optional; in-memory default)
 # torch NOT in requirements — optional, installed separately (CPU wheel);
 # absence triggers the flagged MockTemporalModel fallback
+# transformers+torch NOT in requirements — optional for vision module;
+# absence triggers OBSERVATION_MODEL_UNTRAINED stub mode

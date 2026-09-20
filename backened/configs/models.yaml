@@ -1,0 +1,17 @@
+# GEO-SENTINEL model registry pointers (SIH §15). All EXPERIMENTAL unless promoted.
+rf_artifact: models/rf/gs_v1/gs_rf.joblib
+rf_features: [Elevation_m, Slope_deg, Aspect_deg, Curvature, TPI_m, Roughness_m,
+  LULC_Class, Distance_to_Nearest_Road_m, Distance_to_Major_Road_m,
+  Distance_to_Tertiary_or_Higher_Road_m, Road_Length_1km_m,
+  Distance_to_Nearest_Waterway_m, Distance_to_Major_Waterway_m, Waterway_Length_1km_m]
+terrain_artifact: models/rf/gs_v1/gs_terrain.joblib
+terrain_features: [Elevation_m, Slope_deg, Aspect_deg, Curvature, TPI_m, Roughness_m]
+mamba_checkpoints: models/mamba/gs_v1/checkpoints/fold{k}.pt
+mamba_scalers: models/mamba/gs_v1/checkpoints/scaler_fold{k}.joblib
+mamba_features: [Rain_1h_mm, Rain_3h_mm, Rain_6h_mm, Rain_12h_mm, Rain_24h_mm,
+  Rain_72h_mm, swvl1, swvl2, swvl3, swvl4, t2m, d2m, sp, u10, v10]
+fusion_artifact: models/fusion/gs_v1/gs_fusion.joblib
+# Live fusion weights (hazard): static + dynamic + escalation (see app/ml/fusion.py)
+fusion_weights: {static: 0.5, dynamic: 0.5}
+segformer: {status: BLOCKED, reason: void-pixels-no-masks}
+promotion: none-promoted

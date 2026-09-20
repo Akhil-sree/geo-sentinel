@@ -1,0 +1,16 @@
+# GEO-SENTINEL training configuration (SIH §15). Experiment gs_v1 values.
+seed: 42
+experiment: gs_v1
+tabular_cv: {strategy: StratifiedGroupKFold, splits: 3, group_radius_km: 10.0}
+mamba_cv: {strategy: GroupKFold-event, splits: 3}
+mamba_cutoff: strictly-before-event-day
+mamba_arch: {proj: 16, d_state: 8, dropout: 0.2}
+mamba_opt: {lr: 0.001, weight_decay: 0.001, epochs: 60, patience: 8, grad_clip: 1.0}
+rf: {n_estimators: 300, min_samples_leaf: 2, class_weight: balanced_subsample}
+logreg: {max_iter: 5000, class_weight: balanced}
+hgb: {max_iter: 200, max_depth: 3, class_weight: balanced}
+xgb: {n_estimators: 200, max_depth: 3, learning_rate: 0.05}
+lgbm: {n_estimators: 200, max_depth: 3, num_leaves: 15, class_weight: balanced}
+fusion: {model: LogisticRegression-balanced, inputs: [rf_oof_proba, mamba_oof_proba]}
+gis: {stride_px: 12, threshold_watch: 0.65}
+segformer: {status: BLOCKED, valid_pixel_threshold: 0.01}

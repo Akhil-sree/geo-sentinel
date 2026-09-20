@@ -1,0 +1,33 @@
+{
+  "n": 666,
+  "n_pos": 18,
+  "precision": 0.2319,
+  "recall": 0.8889,
+  "f1": 0.3678,
+  "balanced_accuracy": 0.9035,
+  "brier": 0.0848,
+  "confusion": [
+    [
+      595,
+      53
+    ],
+    [
+      2,
+      16
+    ]
+  ],
+  "threshold": 0.5,
+  "roc_auc": 0.9208,
+  "pr_auc": 0.5088,
+  "recall_ci95": [
+    0.672,
+    0.969
+  ],
+  "split": "GroupKFold-3 by event (OOF inputs from both branches)",
+  "inputs": [
+    "rf_static_oof_proba",
+    "mamba_oof_proba"
+  ],
+  "leakage_check_passed": true,
+  "n_seq": 666
+}

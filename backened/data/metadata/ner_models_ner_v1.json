@@ -1,0 +1,186 @@
+{
+ "dataset": "ner_v1",
+ "at": "2026-09-15T11:47:48.879275+00:00",
+ "models": {
+  "ner_logreg": {
+   "n_samples": 30,
+   "n_pos": 10,
+   "n_neg": 20,
+   "n_groups": 5,
+   "n_features": 27,
+   "cv_f1_mean": 0.2778,
+   "cv_f1_std": 0.2079,
+   "cv_recall_mean": 0.2444,
+   "holdout_n": 12,
+   "f1": 0.3333,
+   "recall": 0.25,
+   "precision": 0.5,
+   "pr_auc": 0.5405,
+   "roc_auc": 0.5625,
+   "brier": 0.318,
+   "confusion": [
+    [
+     7,
+     1
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "leakage_check_passed": true,
+   "dropped_all_missing": [
+    "soil_moisture",
+    "soil_1d",
+    "soil_3d",
+    "soil_7d",
+    "sar_pre_days",
+    "sar_post_days",
+    "sar_same_orbit",
+    "hist_density_15km",
+    "nearest_spatial_km"
+   ],
+   "dropped_future_inventory": [
+    "hist_density_15km",
+    "nearest_spatial_km"
+   ],
+   "ldo_f1_mean": 0.2,
+   "ldo_per_district": {
+    "East Khasi Hills": 0.3333,
+    "South Garo Hills": 0.6667,
+    "West Garo Hills": 0.0,
+    "West Jaintia Hills": 0.0,
+    "West Khasi Hills": 0.0
+   },
+   "recall_ci95": [
+    0.046,
+    0.699
+   ],
+   "precision_ci95": [
+    0.095,
+    0.905
+   ],
+   "calibration_note": "uncalibrated (insufficient n for Platt/isotonic)"
+  },
+  "ner_rf": {
+   "n_samples": 30,
+   "n_pos": 10,
+   "n_neg": 20,
+   "n_groups": 5,
+   "n_features": 27,
+   "cv_f1_mean": 0.3667,
+   "cv_f1_std": 0.2625,
+   "cv_recall_mean": 0.3111,
+   "holdout_n": 12,
+   "f1": 0.4,
+   "recall": 0.25,
+   "precision": 1.0,
+   "pr_auc": 0.5597,
+   "roc_auc": 0.5625,
+   "brier": 0.2157,
+   "confusion": [
+    [
+     8,
+     0
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "leakage_check_passed": true,
+   "dropped_all_missing": [
+    "soil_moisture",
+    "soil_1d",
+    "soil_3d",
+    "soil_7d",
+    "sar_pre_days",
+    "sar_post_days",
+    "sar_same_orbit",
+    "hist_density_15km",
+    "nearest_spatial_km"
+   ],
+   "dropped_future_inventory": [
+    "hist_density_15km",
+    "nearest_spatial_km"
+   ],
+   "ldo_f1_mean": 0.32,
+   "ldo_per_district": {
+    "East Khasi Hills": 0.6,
+    "South Garo Hills": 1.0,
+    "West Garo Hills": 0.0,
+    "West Jaintia Hills": 0.0,
+    "West Khasi Hills": 0.0
+   },
+   "recall_ci95": [
+    0.046,
+    0.699
+   ],
+   "precision_ci95": [
+    0.207,
+    1.0
+   ],
+   "calibration_note": "uncalibrated (insufficient n for Platt/isotonic)"
+  },
+  "ner_gbm": {
+   "n_samples": 30,
+   "n_pos": 10,
+   "n_neg": 20,
+   "n_groups": 5,
+   "n_features": 27,
+   "cv_f1_mean": 0.6889,
+   "cv_f1_std": 0.0831,
+   "cv_recall_mean": 0.7556,
+   "holdout_n": 12,
+   "f1": 0.3333,
+   "recall": 0.25,
+   "precision": 0.5,
+   "pr_auc": 0.5271,
+   "roc_auc": 0.6094,
+   "brier": 0.3333,
+   "confusion": [
+    [
+     7,
+     1
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "leakage_check_passed": true,
+   "dropped_all_missing": [
+    "soil_moisture",
+    "soil_1d",
+    "soil_3d",
+    "soil_7d",
+    "sar_pre_days",
+    "sar_post_days",
+    "sar_same_orbit",
+    "hist_density_15km",
+    "nearest_spatial_km"
+   ],
+   "dropped_future_inventory": [
+    "hist_density_15km",
+    "nearest_spatial_km"
+   ],
+   "ldo_f1_mean": 0.5533,
+   "ldo_per_district": {
+    "East Khasi Hills": 0.6,
+    "South Garo Hills": 1.0,
+    "West Garo Hills": 0.5,
+    "West Jaintia Hills": 0.6667,
+    "West Khasi Hills": 0.0
+   },
+   "recall_ci95": [
+    0.046,
+    0.699
+   ],
+   "precision_ci95": [
+    0.095,
+    0.905
+   ],
+   "calibration_note": "uncalibrated (insufficient n for Platt/isotonic)"
+  }
+ }
+}

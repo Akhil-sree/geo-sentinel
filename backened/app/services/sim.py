@@ -10,7 +10,9 @@ react end-to-end.
 """
 
 import datetime as dt
+import hashlib
 import math
+import os
 
 import pandas as pd
 
@@ -86,6 +88,12 @@ def run_pipeline(t_hours: int):
 
     rf = RFModel()
     tm = get_temporal_model()
+    try:
+        from app.ml.xai import permutation_bundle
+        perm = permutation_bundle()  # measured once per run (cached)
+    except Exception as e:
+        _log.getLogger("geo-sentinel").debug("Permutation bundle failed: %s", e)
+        perm = None
 
     results = []
 
@@ -114,9 +122,11 @@ def run_pipeline(t_hours: int):
             )
 
             # -------------------------------------------------
-            # 3. Static RF prediction
+            # 3. Static RF prediction (inference timed for provenance)
             # -------------------------------------------------
 
+            import time as _t
+            _infer0 = _t.perf_counter()
             if rf.available():
                 rf_res = rf.predict(z)
             else:
@@ -142,10 +152,16 @@ def run_pipeline(t_hours: int):
             # 6. Temporal model sequence
             # -------------------------------------------------
 
+            # SATELLITE_DEMO quarantine: random mock SAR must never steer
+            # production risk. Neutral constant unless SATELLITE_LIVE=true.
+            import os as _os
+            _sar = (float(z.sar_change_score or 0.0)
+                    if _os.getenv("SATELLITE_LIVE", "false").lower() == "true"
+                    else 0.15)
             seq = build_model_sequence(
                 rain_df,
                 soil_df,
-                float(z.sar_change_score or 0.0),
+                _sar,
             )
 
             # -------------------------------------------------
@@ -167,6 +183,7 @@ def run_pipeline(t_hours: int):
                     "soil_moisture_current"
                 ],
             )
+            inference_ms = round((_t.perf_counter() - _infer0) * 1000, 2)
 
             # -------------------------------------------------
             # 9. Explainability
@@ -187,12 +204,15 @@ def run_pipeline(t_hours: int):
                 soil_features,
                 fusion_result["escalated"],
                 fusion_result["escalation_reasons"],
+                perm,
             )
 
             # -------------------------------------------------
             # 10. Confidence
             # -------------------------------------------------
 
+            # Uncalibrated model score (NOT a probability — see metadata).
+            # Field name `confidence` retained for API compat; basis labeled.
             confidence = (
                 rf_res["static_score"]
                 + dyn["dynamic_score"]
@@ -202,6 +222,7 @@ def run_pipeline(t_hours: int):
                 0.0,
                 min(1.0, confidence),
             )
+            confidence_basis = "uncalibrated mean(static, dynamic) — do not read as probability"
 
             # -------------------------------------------------
             # 11. Store risk history
@@ -304,6 +325,11 @@ def run_pipeline(t_hours: int):
                 ),
 
                 "confidence": confidence,
+                "confidence_basis": confidence_basis,
+                "probability_status": ("uncalibrated model score — not a "
+                                       "probability; see /api/model/reliability"),
+                "calibration_status": "uncalibrated",
+                "temporal_backend": dyn.get("backend", "mock_heuristic_fallback"),
 
                 "rainfall_24h": (
                     rain_features[
@@ -356,6 +382,33 @@ def run_pipeline(t_hours: int):
                     "fusion": fusion_result[
                         "fusion_version"
                     ],
+                },
+
+                # Single traceable provenance object (Phase 14)
+                "risk_provenance": {
+                    "model": {
+                        "rf": rf_res["version"],
+                        "temporal": dyn["version"],
+                        "temporal_backend": dyn.get(
+                            "backend", "mock_heuristic_fallback"),
+                        "fusion": fusion_result["fusion_version"],
+                    },
+                    "rainfall": {
+                        "source": "SIMULATED monsoon scenario",
+                        "window": f"t=0..{t_hours}h",
+                    },
+                    "soil": {"source": "SIMULATED scenario"},
+                    "terrain": {"version": "seed v1 STATIC + SRTM observed "
+                                           "(see /api/gis/provenance)"},
+                    "satellite": {"used": False,
+                                  "note": "quarantined neutral 0.15"},
+                    "history": {"dataset_version": "events_v2"},
+                    "calibration_status": "uncalibrated",
+                    "probability_status": ("uncalibrated model score — "
+                                           "not a probability"),
+                    "inference_ms": inference_ms,
+                    "generated_at": dt.datetime.now(
+                        dt.timezone.utc).isoformat(),
                 },
 
                 "sim_time": (
@@ -423,6 +476,12 @@ def _rf_fallback(z):
     }
 
 
+def _live_rain_provider() -> bool:
+    """True when a live rain provider is configured — the demo scrubber must
+    never silently replace real observations (read at call time, not import)."""
+    return os.getenv("RAIN_PROVIDER", "mock").lower() == "openmeteo"
+
+
 def _sync_rain(
     zone_id,
     t_hours,
@@ -438,12 +497,30 @@ def _sync_rain(
 
         from ..models_db import RainfallObservation
 
-        # Remove previous simulated observations
+        # Live-data guard: with a live provider configured and real rows
+        # stored, use them — never wipe OPENMETEO_LIVE/SENSOR rows with the
+        # synthetic storm (worker runs this every 15 min).
+        if _live_rain_provider():
+            live = (
+                db.query(RainfallObservation)
+                .filter(RainfallObservation.zone_id == zone_id,
+                        RainfallObservation.source.notin_(["IMD_MOCK"]))
+                .order_by(RainfallObservation.timestamp).all()
+            )
+            if live:
+                return pd.DataFrame([
+                    {"timestamp": r.timestamp,
+                     "rainfall_mm_per_hr": r.rainfall_mm_per_hr} for r in live
+                ]).sort_values("timestamp")
+
+        # Demo path: remove previous SIMULATED rows only (live/sensor rows
+        # survive even in demo mode), then rewrite the storm curve.
         db.query(
             RainfallObservation
         ).filter(
             RainfallObservation.zone_id
-            == zone_id
+            == zone_id,
+            RainfallObservation.source.in_(["IMD_MOCK"]),
         ).delete(
             synchronize_session=False
         )
@@ -515,18 +592,36 @@ def _sync_soil(
 
         from ..models_db import SoilMoistureObservation
 
-        # Remove previous simulated observations
+        # Same live-data guard as rainfall (SMAP_MOCK/DEMO rows only).
+        if _live_rain_provider():
+            live = (
+                db.query(SoilMoistureObservation)
+                .filter(SoilMoistureObservation.zone_id == zone_id,
+                        SoilMoistureObservation.source.notin_(["SMAP_MOCK"]))
+                .order_by(SoilMoistureObservation.timestamp).all()
+            )
+            if live:
+                return pd.DataFrame([
+                    {"timestamp": r.timestamp,
+                     "soil_moisture": r.soil_moisture} for r in live
+                ]).sort_values("timestamp")
+
+        # Remove previous simulated observations (demo-scoped delete only)
         db.query(
             SoilMoistureObservation
         ).filter(
             SoilMoistureObservation.zone_id
-            == zone_id
+            == zone_id,
+            SoilMoistureObservation.source.in_(["SMAP_MOCK"]),
         ).delete(
             synchronize_session=False
         )
 
-        # Generate synthetic daily soil moisture (SMAP-style sparse cadence)
-        base_moisture = 0.35 + 0.30 * (abs(hash(zone_id)) % 100) / 100
+        # Generate synthetic daily soil moisture (SMAP-style sparse cadence).
+        # Stable per-zone seed (sha256, not hash() — CPython string hashing
+        # is salted per process and not reproducible across restarts).
+        base_moisture = 0.35 + 0.30 * (
+            int(hashlib.sha256(zone_id.encode()).hexdigest(), 16) % 100) / 100
         for h in range(0, t_hours + 1, 12):  # every 12 hours
             rain_so_far = sum(storm(i) for i in range(max(1, h - 72), h + 1))
             saturation = min(0.92, base_moisture + rain_so_far * 0.0008)

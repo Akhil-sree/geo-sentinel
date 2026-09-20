@@ -11,7 +11,12 @@ export default function ReportList({ reports }: { reports: CitizenReport[] }) {
   return (
     <ul className="space-y-2">
       {reports.map((r) => (
-        <li key={r.id} className="rounded border border-slate-800 bg-slate-900/60 p-2 text-xs">
+        <li key={r.id} className="rounded p-2 text-xs" style={{
+          background: 'rgba(7, 25, 20, 0.68)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.10)',
+        }}>
           <div className="flex justify-between">
             <span className="font-mono text-slate-400">{r.lat.toFixed(4)}, {r.lng.toFixed(4)}</span>
             <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${STATUS_CLS[r.status]}`}>

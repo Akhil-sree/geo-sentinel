@@ -14,7 +14,10 @@ try:
     import torch
     import torch.nn as nn
     TORCH = True
-except ImportError:
+except (ImportError, OSError):
+    # OSError: torch present but its native libs fail to load in this
+    # process (e.g. OpenMP DLL conflict after sklearn). Fall back honestly
+    # instead of crashing the risk path; backend label shows it.
     TORCH = False
 
 SEQ_LEN = 48
@@ -54,7 +57,11 @@ if TORCH:
             self.cell = SelectiveSSMCell()
             self.version = VERSION
             if weights_path:
-                self.cell.load_state_dict(torch.load(weights_path, map_location="cpu"))
+                # weights_only=True: local trusted state-dict artifacts only;
+                # never unpickle arbitrary objects (e.g. from MAMBA_WEIGHTS).
+                self.cell.load_state_dict(
+                    torch.load(weights_path, map_location="cpu",
+                               weights_only=True))
 
         def predict(self, sequence):
             x = torch.tensor([sequence], dtype=torch.float32)     # (1, T, D)
@@ -83,6 +90,53 @@ class MockTemporalModel(TemporalRiskModel):
 
 
 def get_temporal_model():
-    if TORCH:
-        return MambaTemporalModel()
+    """ABSOLUTE RULE: an untrained net must NEVER affect production risk.
+    Random-init Mamba is returned ONLY when MAMBA_LIVE=true AND a weights
+    file exists; otherwise the labeled heuristic fallback is used."""
+    import os as _os
+    w = _os.getenv("MAMBA_WEIGHTS", "")
+    live = _os.getenv("MAMBA_LIVE", "false").lower() == "true"
+    if TORCH and live and w and _os.path.exists(w):
+        try:
+            return MambaTemporalModel(weights_path=w)
+        except Exception as e:
+            _log.getLogger("geo-sentinel").warning(
+                "Mamba model load failed, using mock fallback: %s", e)
     return MockTemporalModel()
+
+
+def temporal_status() -> dict:
+    import os as _os
+    w = _os.getenv("MAMBA_WEIGHTS", "")
+    live = _os.getenv("MAMBA_LIVE", "false").lower() == "true"
+    trained = bool(live and w and _os.path.exists(w))
+    m = get_temporal_model()
+    return {
+        "model": "Mamba selective-SSM" if trained else "heuristic temporal baseline",
+        "version": getattr(m, "version", VERSION),
+        "backend": m.backend(),
+        "state": "TRAINED" if trained else "FALLBACK (untrained Mamba excluded from risk path)",
+    }
+
+
+def build_gs_ssm(d_in: int = 15, d_state: int = 8, dropout: float = 0.2):
+    """gs_v1 SmallSSM container (proj + LayerNorm + Dropout + SelectiveSSMCell).
+
+    Architecture twin of the gs_mamba_worker training net; loads the
+    models/mamba/gs_v1/checkpoints/fold{k}.pt state dicts for inference.
+    """
+    import torch.nn as nn
+    cell = SelectiveSSMCell
+
+    class SmallSSM(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.proj = nn.Linear(d_in, 16)
+            self.norm = nn.LayerNorm(16)
+            self.drop = nn.Dropout(dropout)
+            self.cell = cell(d_in=16, d_state=d_state)
+
+        def forward(self, x):
+            return self.cell(self.drop(self.norm(self.proj(x))))
+
+    return SmallSSM()

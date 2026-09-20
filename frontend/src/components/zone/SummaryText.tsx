@@ -1,9 +1,11 @@
-/** Plain-language summary generated strictly from backend model outputs —
- *  the frontend never invents explanation beyond what the API returned. */
 export default function SummaryText({ text }: { text: string }) {
   return (
-    <p className="mt-3 rounded border border-slate-800 bg-slate-900/50 p-2.5
-                  text-xs leading-relaxed text-slate-300">
+    <p className="mt-3 rounded-card p-3 text-[11px] leading-relaxed text-gs-text-secondary" style={{
+      background: 'rgba(244, 241, 235, 0.65)',
+      backdropFilter: 'blur(6px)',
+      WebkitBackdropFilter: 'blur(6px)',
+      border: '1px solid rgba(214, 208, 196, 0.30)',
+    }}>
       {text}
     </p>
   );

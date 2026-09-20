@@ -34,6 +34,12 @@ class IngestionAdapter(ABC):
             except Exception as e:
                 if attempt >= MAX_RETRIES:
                     self.log(db, "STALE", f"failed after {MAX_RETRIES} retries: {e}")
+                    try:
+                        from app.observability import record_provider_failure
+                        record_provider_failure(self.source_name)
+                    except Exception as e:
+                        _log.getLogger("geo-sentinel").debug(
+                            "Provider failure recording failed: %s", e)
                     return {"source": self.source_name, "status": "STALE", "detail": str(e)}
                 time.sleep(BACKOFF_S[attempt])
                 attempt += 1
@@ -51,5 +57,5 @@ class IngestionAdapter(ABC):
     def log(self, db, status: str, detail: str) -> None:
         from app.models_db import IngestionLog
         db.add(IngestionLog(source=self.source_name, status=status, detail=detail,
-                            at=datetime.now(timezone.utc)))
+                            ran_at=datetime.now(timezone.utc)))
         db.commit()

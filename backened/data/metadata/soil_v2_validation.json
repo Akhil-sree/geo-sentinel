@@ -1,0 +1,23 @@
+{
+ "at": "2026-09-15T18:33:34.558063+00:00",
+ "units": 24,
+ "crs_field": false,
+ "crs_assumed": "EPSG:4326 (lon/lat degrees \u2014 evidence: value ranges, NOT a declared CRS)",
+ "lon_range": [
+  89.817,
+  92.805
+ ],
+ "lat_range": [
+  25.03,
+  26.118
+ ],
+ "area_sum_sqkm": 22450.7,
+ "invalid_geometries": 1,
+ "unknown_axes": {
+  "drainage": 0,
+  "texture": 0,
+  "erosion": 0
+ },
+ "provenance": "UNKNOWN (no agency/date in file or folder)",
+ "vintage": "UNKNOWN"
+}

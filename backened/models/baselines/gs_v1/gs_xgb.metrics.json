@@ -1,0 +1,58 @@
+{
+  "roc_auc": 0.9474,
+  "pr_auc": 0.9252,
+  "precision": 0.8611,
+  "recall": 0.8333,
+  "f1": 0.8364,
+  "balanced_accuracy": 0.8899,
+  "brier": 0.0872,
+  "cv_overall": {
+    "n": 54,
+    "n_pos": 18,
+    "precision": 0.8824,
+    "recall": 0.8333,
+    "f1": 0.8571,
+    "balanced_accuracy": 0.8889,
+    "brier": 0.0891,
+    "confusion": [
+      [
+        34,
+        2
+      ],
+      [
+        3,
+        15
+      ]
+    ],
+    "threshold": 0.5,
+    "roc_auc": 0.929,
+    "pr_auc": 0.9009,
+    "recall_ci95": [
+      0.608,
+      0.942
+    ]
+  },
+  "n_samples": 54,
+  "n_pos": 18,
+  "n_neg": 36,
+  "class_ratio": 2.0,
+  "split": "StratifiedGroupKFold-3 (event/spatial groups, seed 42)",
+  "n_groups": 49,
+  "features": [
+    "Elevation_m",
+    "Slope_deg",
+    "Aspect_deg",
+    "Curvature",
+    "TPI_m",
+    "Roughness_m",
+    "LULC_Class",
+    "Distance_to_Nearest_Road_m",
+    "Distance_to_Major_Road_m",
+    "Distance_to_Tertiary_or_Higher_Road_m",
+    "Road_Length_1km_m",
+    "Distance_to_Nearest_Waterway_m",
+    "Distance_to_Major_Waterway_m",
+    "Waterway_Length_1km_m"
+  ],
+  "leakage_check_passed": true
+}

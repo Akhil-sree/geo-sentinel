@@ -49,22 +49,42 @@ def _to_features(z) -> list[float]:
     """
     Convert a Zone object into the feature vector
     expected by the Random Forest.
+
+    Raises ValueError on NaN/Inf/non-numeric/out-of-range inputs so that
+    invalid ML input can never silently produce a misleading score.
     """
+    import math
+
+    def _num(value, name, lo=None, hi=None):
+        try:
+            v = float(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"RF feature '{name}' is not numeric: {value!r}")
+        if not math.isfinite(v):
+            raise ValueError(f"RF feature '{name}' is not finite: {value!r}")
+        if lo is not None and v < lo:
+            raise ValueError(f"RF feature '{name}'={v} below minimum {lo}")
+        if hi is not None and v > hi:
+            raise ValueError(f"RF feature '{name}'={v} above maximum {hi}")
+        return v
+
+    slope = _num(z.slope, "slope", 0, 90)
+    elevation = _num(z.elevation, "elevation", -500, 9000)
 
     return [
-        float(z.slope),
+        slope,
 
         # Normalize elevation to 0-1
         min(
             1.0,
-            float(z.elevation) / 2000.0
+            elevation / 2000.0
         ),
 
-        float(z.ruggedness),
-        float(z.road_proximity),
-        float(z.drainage_proximity),
-        float(z.settlement_density),
-        float(z.sar_change_score),
+        _num(z.ruggedness, "ruggedness", 0),
+        _num(z.road_proximity, "road_proximity", 0),
+        _num(z.drainage_proximity, "drainage_proximity", 0),
+        _num(z.settlement_density, "settlement_density", 0),
+        _num(z.sar_change_score, "sar_change_score", 0, 1),
     ]
 
 
@@ -182,6 +202,15 @@ def train(
         n_jobs=-1,
     )
 
+    # Precision/recall/F1 (macro — imbalanced 3-class demo set; accuracy alone misleads)
+    from sklearn.model_selection import cross_val_predict
+    from sklearn.metrics import precision_recall_fscore_support
+    try:
+        y_pred = cross_val_predict(clf, X, y, cv=cv.split(X, y, groups=spatial_blocks))
+        prec, rec, f1, _ = precision_recall_fscore_support(y, y_pred, average="macro", zero_division=0)
+    except Exception:
+        prec = rec = f1 = 0.0
+
     # ---------------------------------------------------------
     # Train final model on all data
     # ---------------------------------------------------------
@@ -235,6 +264,14 @@ def train(
 
         "cv_accuracy_std": float(scores.std()),
 
+        "cv_precision_macro": round(float(prec), 4),
+
+        "cv_recall_macro": round(float(rec), 4),
+
+        "cv_f1_macro": round(float(f1), 4),
+
+        "calibration": "uncalibrated — raw RF vote fractions; do not read as probability",
+
         "cv_scores": [
             float(score)
             for score in scores
@@ -285,8 +322,13 @@ class RFModel:
             "model.joblib",
         )
 
+        self.load_error = None
         if os.path.exists(self.path):
-            self.model = joblib.load(self.path)
+            try:
+                self.model = joblib.load(self.path)
+            except Exception as e:  # corrupt artifact: labeled fallback
+                self.model = None   # downstream, never a crash
+                self.load_error = f"corrupt artifact {version}: {e}"[:200]
         else:
             self.model = None
 
@@ -378,6 +420,28 @@ class RFModel:
                 self.model.feature_importances_,
             )
         }
+
+
+def rf_status() -> dict:
+    """Honest static-model card for /data-status."""
+    import json as _json
+    meta_path = os.path.join(MODEL_DIR, VERSION, "metadata.json")
+    try:
+        meta = _json.load(open(meta_path, encoding="utf-8"))
+    except Exception:
+        meta = {}
+    n = int(meta.get("n_training_samples", 0) or 0)
+    return {
+        "model": "RandomForest",
+        "version": VERSION,
+        "state": "TRAINED" if os.path.exists(
+            os.path.join(MODEL_DIR, VERSION, "model.joblib")) else "UNTRAINED",
+        "n_training_samples": n,
+        "data": "STATIC DEMO (8 Meghalaya zones)" if n <= 12 else "curated dataset",
+        "cv_accuracy": meta.get("cv_accuracy"),
+        "cv_f1_macro": meta.get("cv_f1_macro"),
+        "calibration": meta.get("calibration", "uncalibrated"),
+    }
 
 
 def load_metrics(version: str = VERSION) -> dict:

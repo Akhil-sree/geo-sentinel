@@ -1,0 +1,160 @@
+{
+  "roc_auc": 0.5221,
+  "pr_auc": 0.0465,
+  "precision": 0.0273,
+  "recall": 0.6667,
+  "f1": 0.0524,
+  "balanced_accuracy": 0.4938,
+  "brier": 0.2728,
+  "cv_overall": {
+    "n": 666,
+    "n_pos": 18,
+    "precision": 0.0265,
+    "recall": 0.6667,
+    "f1": 0.0511,
+    "balanced_accuracy": 0.4938,
+    "brier": 0.2728,
+    "confusion": [
+      [
+        208,
+        440
+      ],
+      [
+        6,
+        12
+      ]
+    ],
+    "threshold": 0.5,
+    "roc_auc": 0.5167,
+    "pr_auc": 0.0396,
+    "recall_ci95": [
+      0.437,
+      0.837
+    ]
+  },
+  "folds": [
+    {
+      "n": 222,
+      "n_pos": 6,
+      "precision": 0.0247,
+      "recall": 0.6667,
+      "f1": 0.0476,
+      "balanced_accuracy": 0.4676,
+      "brier": 0.2851,
+      "confusion": [
+        [
+          58,
+          158
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "threshold": 0.5,
+      "roc_auc": 0.4491,
+      "pr_auc": 0.0305,
+      "recall_ci95": [
+        0.3,
+        0.903
+      ],
+      "events": [
+        "10987",
+        "13723",
+        "6214",
+        "6970",
+        "8012",
+        "9789"
+      ],
+      "val_loss": 1.38893
+    },
+    {
+      "n": 222,
+      "n_pos": 6,
+      "precision": 0.0231,
+      "recall": 0.6667,
+      "f1": 0.0447,
+      "balanced_accuracy": 0.4421,
+      "brier": 0.2909,
+      "confusion": [
+        [
+          47,
+          169
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "threshold": 0.5,
+      "roc_auc": 0.5201,
+      "pr_auc": 0.0521,
+      "recall_ci95": [
+        0.3,
+        0.903
+      ],
+      "events": [
+        "10988",
+        "13724",
+        "6290",
+        "7335",
+        "8366",
+        "9124"
+      ],
+      "val_loss": 1.35383
+    },
+    {
+      "n": 222,
+      "n_pos": 6,
+      "precision": 0.0342,
+      "recall": 0.6667,
+      "f1": 0.065,
+      "balanced_accuracy": 0.5718,
+      "brier": 0.2424,
+      "confusion": [
+        [
+          103,
+          113
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "threshold": 0.5,
+      "roc_auc": 0.5972,
+      "pr_auc": 0.0568,
+      "recall_ci95": [
+        0.3,
+        0.903
+      ],
+      "events": [
+        "10985",
+        "10986",
+        "10989",
+        "2025",
+        "6969",
+        "7956"
+      ],
+      "val_loss": 1.30506
+    }
+  ],
+  "pos_event_recall_per_fold": [
+    0.6667,
+    0.6667,
+    0.6667
+  ],
+  "n_seq": 666,
+  "n_events": 18,
+  "split": "GroupKFold-3 by event window (seed 42)",
+  "leakage_check_passed": true,
+  "config": {
+    "d_state": 8,
+    "proj": 16,
+    "dropout": 0.2,
+    "lr": 0.001,
+    "epochs": 60,
+    "patience": 8,
+    "seed": 42
+  }
+}

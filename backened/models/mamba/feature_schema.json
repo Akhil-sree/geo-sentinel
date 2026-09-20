@@ -1,0 +1,22 @@
+{
+  "features": [
+    "Rain_1h_mm",
+    "Rain_3h_mm",
+    "Rain_6h_mm",
+    "Rain_12h_mm",
+    "Rain_24h_mm",
+    "Rain_72h_mm",
+    "swvl1",
+    "swvl2",
+    "swvl3",
+    "swvl4",
+    "t2m",
+    "d2m",
+    "sp",
+    "u10",
+    "v10"
+  ],
+  "steps_used": 49,
+  "cutoff": "strictly-before-event-day",
+  "note": "event-grouped only; never row-split"
+}

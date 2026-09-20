@@ -1,0 +1,14 @@
+# GEO-SENTINEL dataset locations (SIH §15). Override via env or --config.
+# Paths relative to backened/ unless absolute.
+rf_csv: ../datasets/GEO_SENTINEL_TRAINING_PACKAGE/GEO_SENTINEL_TRAINING_PACKAGE/RF/meghalaya_rf_training_features.csv
+mamba_csv: ../datasets/GEO_SENTINEL_TRAINING_PACKAGE/GEO_SENTINEL_TRAINING_PACKAGE/MAMBA/meghalaya_mamba_supervised_sequences_15f.csv
+mamba_npz: ../datasets/GEO_SENTINEL_TRAINING_PACKAGE/GEO_SENTINEL_TRAINING_PACKAGE/MAMBA/meghalaya_mamba_supervised_tensor_15f.npz
+labels_csv: ../datasets/GEO_SENTINEL_TRAINING_PACKAGE/GEO_SENTINEL_TRAINING_PACKAGE/LABELS/meghalaya_high_confidence_events.csv
+event_manifest: ../datasets/GEO_SENTINEL_TRAINING_PACKAGE/GEO_SENTINEL_TRAINING_PACKAGE/SEGFORMER/event_manifest.csv
+seg_manifest: ../datasets/GEO_SENTINEL_TRAINING_PACKAGE/GEO_SENTINEL_TRAINING_PACKAGE/SEGFORMER/segformer_manifest.csv
+reports_csv: ../datasets/Landslide Reports.csv
+srtm_tiles: [../datasets/n25_e090_1arc_v3.tif, ../datasets/n25_e091_1arc_v3.tif, ../datasets/n26_e090_1arc_v3.tif]
+soil_geojson: ../datasets/Meghalaya_Soil.geojson
+boundary_geojson: ../datasets/state_NWIC.GeoJSON
+boundary_crs: EPSG:7755
+common_crs: EPSG:4326

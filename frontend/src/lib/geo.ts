@@ -1,8 +1,5 @@
-/** Demo zones have a point + no real boundary. We generate a rough hexagonal
- *  footprint around each centroid sized by population, clearly labeled as
- *  DEMO geometry. Production: replace with real GSI zone polygons (GeoJSON). */
 /** Zone geometry helpers.
- * Real deployments load authoritative boundary polygons; the demo snaps
+ * Real deployments load authoritative boundary polygons; the fallback snaps
  * each zone centroid to a hexagonal cell (situational-awareness grid look).
  */
 
@@ -17,6 +14,43 @@ export function zonePolygonCoords(zone: { lat: number; lng: number }): [number, 
       zone.lng + (R * Math.cos(a)) / Math.cos((zone.lat * Math.PI) / 180),
     ];
   });
+}
+
+/** Generate deterministic hotspot coordinates within a zone's hexagonal boundary.
+ *  Uses a simple hash of zoneId for reproducible placement.
+ *  Count scales with severity: LOW=1, MODERATE=2, HIGH=3, VERY_HIGH=4. */
+export function generateHotspotCoords(
+  zone: { lat: number; lng: number; id: string },
+  severity: string,
+): { lat: number; lng: number }[] {
+  const countMap: Record<string, number> = {
+    LOW: 1,
+    MODERATE: 2,
+    HIGH: 3,
+    VERY_HIGH: 4,
+  };
+  const count = countMap[severity] ?? 2;
+  const R = R_KM / 111;
+
+  // Simple deterministic hash from zone id
+  let hash = 0;
+  for (let i = 0; i < zone.id.length; i++) {
+    hash = ((hash << 5) - hash + zone.id.charCodeAt(i)) | 0;
+  }
+
+  const points: { lat: number; lng: number }[] = [];
+  for (let i = 0; i < count; i++) {
+    // Pseudo-random angle and radius using hash + index
+    const seed = ((hash + i * 7919) >>> 0) / 4294967296;
+    const seed2 = (((hash << 3) + i * 104729) >>> 0) / 4294967296;
+    const angle = seed * Math.PI * 2;
+    const dist = (0.15 + seed2 * 0.55) * R; // 15-70% of hex radius
+    points.push({
+      lat: zone.lat + Math.sin(angle) * dist,
+      lng: zone.lng + (Math.cos(angle) * dist) / Math.cos((zone.lat * Math.PI) / 180),
+    });
+  }
+  return points;
 }
 
 

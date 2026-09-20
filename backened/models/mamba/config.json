@@ -1,0 +1,8 @@
+{
+  "experiment": "gs_v1",
+  "seed": 42,
+  "arch": "Linear15-16+LayerNorm+Dropout0.2+SelectiveSSMCell(d_state=8)",
+  "opt": "AdamW lr=1e-3 wd=1e-3, early-stop patience 8",
+  "status": "EXPERIMENTAL",
+  "skill": "chance-level (CV ROC 0.52) \u2014 NOT for live use"
+}

@@ -50,87 +50,24 @@ export default function RainfallChart({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-
-      {/* Chart */}
       <div className="min-h-0 flex-1">
-
-        <ResponsiveContainer
-          width="100%"
-          height="100%"
-        >
-          <AreaChart
-            data={data}
-            margin={{
-              top: 4,
-              right: 4,
-              bottom: 0,
-              left: 0,
-            }}
-          >
-
-            <XAxis
-              dataKey="t"
-              tick={{
-                fontSize: 8,
-                fill: "#707973",
-              }}
-              interval={23}
-              tickLine={false}
-              axisLine={{
-                stroke: "#d9e2d9",
-              }}
-            />
-
-            <YAxis
-              tick={{
-                fontSize: 8,
-                fill: "#707973",
-              }}
-              width={28}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value) => `${value}`}
-            />
-
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+            <XAxis dataKey="t" tick={{ fontSize: 8, fill: "#647269" }} interval={23} tickLine={false} axisLine={{ stroke: "#DCE3DD" }} />
+            <YAxis tick={{ fontSize: 8, fill: "#647269" }} width={28} tickLine={false} axisLine={false} />
             <Tooltip
-              contentStyle={{
-                fontSize: 10,
-                borderRadius: 4,
-                border: "1px solid #d9e2d9",
-              }}
-              formatter={(value) => [
-                `${Number(value ?? 0).toFixed(1)} mm/h`,
-                "Rainfall",
-              ]}
+              contentStyle={{ fontSize: 10, borderRadius: 8, border: "1px solid rgba(255, 255, 255, 0.30)", background: "rgba(255, 255, 255, 0.92)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", boxShadow: "0 4px 14px rgba(15, 35, 27, 0.10)" }}
+              formatter={(value) => [`${Number(value).toFixed(1)} mm/h`, "Rainfall"]}
               labelFormatter={(label) => `Time: ${label}`}
             />
-
-            <Area
-              type="monotone"
-              dataKey="mm"
-              stroke="#04442f"
-              fill="#245c45"
-              fillOpacity={0.25}
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{
-                r: 3,
-              }}
-            />
-
+            <Area type="monotone" dataKey="mm" stroke="#075240" fill="#075240" fillOpacity={0.15} strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
           </AreaChart>
         </ResponsiveContainer>
-
       </div>
 
-
-      {/* Demo Notice */}
-      <div className="mt-1 shrink-0 rounded border border-[#d9e2d9] bg-[#f6f4ec] p-1.5 text-[9px] leading-snug text-[#92400e]">
-        <strong>DEMO DATA</strong> — simulated IMD rainfall
-        observations. Real ingestion swaps the adapter; this
-        chart and its contract stay identical.
+      <div className="mt-1 shrink-0 rounded-card border border-risk-moderate/20 bg-risk-moderate/5 p-1.5 text-[9px] leading-snug text-risk-moderate">
+        <strong>Simulated data</strong> — simulated IMD rainfall observations. Real ingestion swaps the adapter.
       </div>
-
     </div>
   );
 }

@@ -105,9 +105,39 @@ def test_dataset_version_immutable():
     reason="ner_v1 dataset not built (local-only data/processed/ — run scripts/build_training_dataset.py)",
 )
 def test_datasets_api_shapes():
+    import json as _json
+
     from fastapi.testclient import TestClient
 
+    from app.database import SessionLocal
     from app.main import app
+    from app.models_db import DatasetVersion
+
+    # Ensure isolated test DB (fresh .pytest file) has the expected dataset row.
+    # The API reads DatasetVersion table, not just the CSV; on a clean checkout
+    # the table is empty unless the NER pipeline has inserted ner_v1 via
+    # scripts/build_training_dataset.py. Seed minimal row from metadata if missing
+    # so the HTTP contract test validates shape, not stale DB state.
+    _db = SessionLocal()
+    try:
+        if not _db.query(DatasetVersion).filter(DatasetVersion.version == "ner_v1").first():
+            meta_path = os.path.join(os.path.dirname(__file__), "..", "data", "metadata", "ner_training_ner_v1.json")
+            if os.path.exists(meta_path):
+                with open(meta_path, encoding="utf-8") as _f:
+                    _m = _json.load(_f)
+                _db.add(DatasetVersion(
+                    version="ner_v1", region=_m.get("region", "NER"),
+                    feature_version=_m.get("feature_version", "nerfeat_v1"),
+                    code_version=_m.get("code_version", "ner-pipeline-1.0"),
+                    checksum=_m.get("checksum", "test"),
+                    status="VALIDATED",
+                    sources_json=_json.dumps(_m.get("splits", {})),
+                    counts_json=_json.dumps({"positive": _m.get("positive", 0), "negative": _m.get("negative", 0)}),
+                ))
+                _db.commit()
+    finally:
+        _db.close()
+
     c = TestClient(app)
     assert c.get("/api/datasets").status_code == 200
     assert c.get("/api/datasets/ner_v1").status_code == 200

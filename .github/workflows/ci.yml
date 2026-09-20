@@ -45,7 +45,10 @@ jobs:
           mypy app/ --ignore-missing-imports || true
 
       - name: Run tests
+        env:
+          TEST_DATABASE_URL: sqlite:///./.pytest/geosentinel-test.db
         run: |
+          rm -rf .pytest
           python -m pytest tests/ -v --tb=short
 
   frontend:

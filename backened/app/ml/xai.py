@@ -21,7 +21,6 @@ def permutation_bundle():
     """
     if _PERM_CACHE.get("done"):
         return _PERM_CACHE.get("bundle")
-    _PERM_CACHE["done"] = True
     try:
         import joblib
         from sklearn.inspection import permutation_importance
@@ -30,8 +29,16 @@ def permutation_bundle():
         from app.ml.dataset import FEATURES, build_event_dataset
         from app.ml.rf_model import MODEL_DIR
         from app.models_db import Zone
-        apath = os.path.join(MODEL_DIR, "event_rf_event", "model.joblib")
-        if not os.path.exists(apath):
+        # Artifact location drift: older training produced event_rf_event/,
+        # current train_rf.main_event produces event_rf_event_v1/. Support both
+        # (and future _v3) so the test does not spuriously skip on a fresh
+        # checkout where only the versioned artifact exists.
+        candidates = [
+            os.path.join(MODEL_DIR, "event_rf_event", "model.joblib"),
+            os.path.join(MODEL_DIR, "event_rf_event_v1", "model.joblib"),
+        ]
+        apath = next((p for p in candidates if os.path.exists(p)), None)
+        if apath is None:
             return None
         db = SessionLocal()
         try:
@@ -49,8 +56,10 @@ def permutation_bundle():
                                "n=24), F1 scoring — near-zero means terrain "
                                "features carry little signal even in-sample")}
         _PERM_CACHE["bundle"] = bundle
+        _PERM_CACHE["done"] = True
         return bundle
     except Exception:
+        # Do not cache transient DB-not-ready failures; allow retry after seed
         return None
 
 

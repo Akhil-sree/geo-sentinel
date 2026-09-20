@@ -11,6 +11,9 @@ import yaml
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()  # development | production
 DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./geo_sentinel.db")
+# Test-time override: when set, the app, worker and tests all bind to this
+# DB (deterministic, disposable). CI sets sqlite:///./.pytest/geosentinel-test.db.
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
 SMS_PROVIDER = os.getenv("SMS_PROVIDER", "mock")
 # Phase 2/5/8/9 knobs (all safe demo defaults; production sets them explicitly)
 RAIN_PROVIDER = os.getenv("RAIN_PROVIDER", "mock")  # mock | openmeteo

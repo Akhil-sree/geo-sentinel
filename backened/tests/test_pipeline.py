@@ -165,14 +165,37 @@ def test_alert_dispatch_idempotent_within_hour():
     assert r3["sent"] >= 1  # new severity = new key
 
 
-@pytest.mark.skipif(
-    not os.path.exists(os.path.join(os.path.dirname(__file__), "..", "models", "rf", "event_rf_event", "model.joblib")),
-    reason="event_rf_event/model.joblib absent (local-only models/rf/)",
-)
 def test_xai_permutation_measured_and_labeled():
+    """Measured permutation importance: deterministic, terrain features present,
+    source labeled honestly.
+
+    Artifact is gitignored; if absent (clean checkout/CI) generate it via the
+    in-repo training pipeline so the test validates real logic, not a skipped
+    placeholder. Previously the test skipped when only event_rf_event_v1 existed
+    (current main_event output), masking the measure+label path.
+    """
+    import os as _os
+
+    from app.ml import xai as _xai
+    from app.ml.rf_model import MODEL_DIR as _MD
+
+    candidates = [
+        _os.path.join(_MD, "event_rf_event", "model.joblib"),
+        _os.path.join(_MD, "event_rf_event_v1", "model.joblib"),
+    ]
+    if not any(_os.path.exists(p) for p in candidates):
+        from app.ml.train_rf import main_event as _main_event
+
+        _main_event()
+        _xai._PERM_CACHE.clear()
+    else:
+        # Clear stale None cached before DB was seeded (old xai.py cached failures)
+        if _xai._PERM_CACHE.get("done") and _xai._PERM_CACHE.get("bundle") is None:
+            _xai._PERM_CACHE.clear()
     from app.ml.xai import explain, permutation_bundle
+
     b = permutation_bundle()
-    assert b and "slope" in b["importances"]
+    assert b and "slope" in b["importances"], f"permutation_bundle returned {b!r} — DB seeded? artifact present?"
     assert b["source"].startswith("permutation on events_v2")
     class Z:
         slope = 40

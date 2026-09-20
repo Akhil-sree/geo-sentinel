@@ -1,6 +1,7 @@
 # CI Final Verification — GEO-SENTINEL
 
-**Current commit:** `97b0290` (before README fix) → next commit will include README stale corrections (`b024bc6` diff)
+**Current commit:** `ab8476a` (`ci: stabilize backend test env — verify existing SQLite fix, correct README stale verifications`)
+**Previous commit:** `97b0290` (docs report) ← `ae9f425` (DB fix) ← `6186e8f`/`1fe216f`
 **Previous CI failure (pre-fix):** `1fe216f`/`6186e8f` era — `no such table: zones|sensors|ingestion_runs|audit_logs|risk_scores`, `PermissionError: /data`, `test_xai_permutation_measured_and_labeled` failure/skip, docs using `|| true`
 **Date:** 2026-09-20
 **Workflow file:** `.github/workflows/ci.yml` (4 jobs: backend, frontend, docs, docker)
@@ -99,11 +100,13 @@ docker build -t geosentinel-frontend:test ./frontend  # success
 
 ## GitHub Actions
 
-**Last verified run before this patch:** `35501322333` (commit `ae9f425`, 2m11s, Success) — Backend 48s ✔, Frontend 30s ✔, Docs 3s ✔, Docker 1m14s ✔ (needs [backend,frontend] satisfied). View: `https://github.com/Akhil-sree/geo-sentinel/actions/runs/35501322333`
+**Verified runs:**
 
-**Current commit for this push:** `README fix` (building on `97b0290`). Will push and `gh run watch` — expected same 4/4 green because only README doc strings changed. No DB code rewritten.
+- `35501322333` (commit `ae9f425` — DB fix, 2m11s, Success) — Backend 48s ✔, Frontend 30s ✔, Docs 3s ✔, Docker 1m14s ✔
+- `35504778945` (commit `ab8476a` — README fix, 2m27s, Success) — Backend 1m16s ✔, Frontend 37s ✔, Docs 5s ✔, Docker 1m05s ✔ (needs [backend,frontend] satisfied). View: `https://github.com/Akhil-sree/geo-sentinel/actions/runs/35504778945` and `https://github.com/Akhil-sree/geo-sentinel/commit/ab8476ae30dbab4322fc2c909ae0105c99ad4dcf/checks`
 
-**Previous CI failure:** `6186e8f` era had `/data` + `no such table` + XAI; after `ae9f425` all green.
+**Current commit:** `ab8476a` — **VERIFIED** 4/4 green (no `queued`).
+**Previous CI failure:** `6186e8f` era had `/data` + `no such table` + XAI; after `ae9f425` all green, remains green after README-only `ab8476a`.
 
 ## Remaining limitations
 
@@ -123,4 +126,4 @@ clean checkout
 → GitHub Actions 4/4 Success (verified 35501322333, next push to verify again)
 ```
 
-**Overall:** Backend Tests **FIXED**, Frontend **FIXED**, TypeScript **FIXED**, Build **FIXED**, Documentation **FIXED**, Docker **FIXED**. GitHub Actions **NOT YET VERIFIED** for this README-only push (pending `gh run watch`), but prior DB fix run **VERIFIED** green.
+**Overall:** Backend Tests **FIXED**, Frontend **FIXED**, TypeScript **FIXED**, Build **FIXED**, Documentation **FIXED**, Docker **FIXED**. GitHub Actions **FIXED** — both `ae9f425` (35501322333) and `ab8476a` (35504778945) **VERIFIED** 4/4 Success.

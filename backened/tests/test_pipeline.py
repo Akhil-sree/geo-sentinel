@@ -165,6 +165,10 @@ def test_alert_dispatch_idempotent_within_hour():
     assert r3["sent"] >= 1  # new severity = new key
 
 
+@pytest.mark.skipif(
+    not os.path.exists(os.path.join(os.path.dirname(__file__), "..", "models", "rf", "event_rf_event", "model.joblib")),
+    reason="event_rf_event/model.joblib absent (local-only models/rf/)",
+)
 def test_xai_permutation_measured_and_labeled():
     from app.ml.xai import explain, permutation_bundle
     b = permutation_bundle()

@@ -48,9 +48,9 @@ def resolve_database_url(url: str = DATABASE_URL) -> str:
         while raw.startswith("./"):
             raw = raw[2:]
         path = os.path.normpath(os.path.join(BACKEND_DIR, raw))
-    parent = os.path.dirname(path)
-    if parent:
-        os.makedirs(parent, exist_ok=True)
+        parent = os.path.dirname(path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
     return f"sqlite:///{path}"
 
 

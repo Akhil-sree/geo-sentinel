@@ -4,6 +4,8 @@ all fixtures inline (honest small-scale checks of pipeline logic)."""
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "data"))
 
 from ner_common import NEGATIVE, POSITIVE, classify_date, dedup_records, in_ner, valid_coords
@@ -98,6 +100,10 @@ def test_dataset_version_immutable():
     assert d["positive"] >= 1 and d["negative"] >= 1
 
 
+@pytest.mark.skipif(
+    not os.path.exists(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "ner_training_ner_v1.csv")),
+    reason="ner_v1 dataset not built (local-only data/processed/ — run scripts/build_training_dataset.py)",
+)
 def test_datasets_api_shapes():
     from fastapi.testclient import TestClient
 

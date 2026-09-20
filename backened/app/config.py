@@ -4,8 +4,9 @@ Thresholds are CALIBRATION PARAMETERS, not validated constants —
 documented in docs/ARCHITECTURE.md and unit-tested in test_fusion.py.
 """
 import os
+from dataclasses import dataclass
+
 import yaml
-from dataclasses import dataclass, field
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()  # development | production
 DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"

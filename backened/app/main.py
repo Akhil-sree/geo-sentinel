@@ -1,30 +1,31 @@
 """FastAPI entry point. On first boot: create tables → seed DB → train RF
 (skipped if a versioned artifact already exists)."""
-import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import Base, engine, SessionLocal
-from app.models_db import *  # noqa: F401,F403 — ensure all tables registered
-from app.seed import seed
-from app.api import risk, reports, alerts, admin, dashboard, routes, vision, status
-from app.api import gs as gs_api
-from app.api import sensors as sensors_api
-from app.api import satellite as satellite_api
-from app.api import datasets as datasets_api
-from app.api import roads_gis as roads_gis_api
-from app.api import rescue as rescue_api
-from app.config import MEDIA_DIR
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 import app.config as _cfg
+from app.api import admin, alerts, dashboard, reports, risk, routes, status, vision
+from app.api import datasets as datasets_api
+from app.api import gs as gs_api
+from app.api import rescue as rescue_api
+from app.api import roads_gis as roads_gis_api
+from app.api import satellite as satellite_api
+from app.api import sensors as sensors_api
+from app.config import MEDIA_DIR
+from app.database import Base, SessionLocal, engine
+from app.models_db import *  # noqa: F401,F403 — ensure all tables registered
 from app.observability import setup_json_logging
+from app.seed import seed
 
 setup_json_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     import logging as _log
+
     from app.database import DB_BACKEND, RESOLVED_DATABASE_URL
     _log.getLogger("geo-sentinel").warning(
         "database backend=%s url=%s "
@@ -34,8 +35,9 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         seed(db)
-        from app.ml.rf_model import MODEL_DIR, VERSION
         import os
+
+        from app.ml.rf_model import MODEL_DIR, VERSION
         if not os.path.exists(os.path.join(MODEL_DIR, VERSION, "model.joblib")):
             from app.ml.train_rf import main
             main()

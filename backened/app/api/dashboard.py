@@ -1,10 +1,11 @@
 """Dashboard endpoints — road connectivity, weather forecast overview, emergency tasks."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models_db import RoadSegment, EmergencyTask, Zone
+from app.models_db import EmergencyTask, RoadSegment, Zone
 
 router = APIRouter(tags=["dashboard"])
 
@@ -90,7 +91,7 @@ def get_weather_overview(t: int = Query(24, ge=24, le=168), db: Session = Depend
         "total": len(forecasts),
         "extreme_count": total_extreme,
         "high_count": total_high,
-        "analyzed_at": datetime.now(timezone.utc).isoformat(),
+        "analyzed_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -165,5 +166,5 @@ def get_severity_summary(t: int = Query(96, ge=24, le=168), db: Session = Depend
         "total_population": total_pop,
         "exposed_population": exposed_pop,
         "escalated_count": sum(1 for z in zone_risks if z["escalated"]),
-        "analyzed_at": datetime.now(timezone.utc).isoformat(),
+        "analyzed_at": datetime.now(UTC).isoformat(),
     }

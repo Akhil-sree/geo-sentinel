@@ -8,18 +8,17 @@ Provides:
     - Citizen-report moderation
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from ..auth import _client_ip, rate_limit, require_role
+from ..config import THRESHOLDS, settings
 from ..database import get_db
 from ..models_db import (
-    IngestionRun,
-    CitizenReport,
     AuditLog,
+    CitizenReport,
+    IngestionRun,
 )
-from ..auth import require_role, rate_limit, _client_ip
-from ..config import THRESHOLDS, settings
-
 
 router = APIRouter()
 
@@ -191,7 +190,6 @@ def moderate(
     only via the dataset-builder job after re-validation — never
     automatically (see docs: feedback-loop).
     """
-    from fastapi import Header as _H  # local alias guard
     from app.auth import guard as _guard
     _guard(x_api_key)
 

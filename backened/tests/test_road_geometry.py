@@ -10,7 +10,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from app.database import SessionLocal  # noqa: E402
 from app.models_db import RoadSegment, Zone  # noqa: E402
 from app.services.route_optimizer import (  # noqa: E402
-    build_graph, find_safest_route,
+    build_graph,
+    find_safest_route,
 )
 
 
@@ -32,7 +33,7 @@ def test_route_path_uses_only_real_graph_edges():
                 if not r.get("route_available"):
                     continue
                 path = r["path"]
-                for a, b in zip(path, path[1:]):
+                for a, b in zip(path, path[1:], strict=False):
                     assert (a, b) in segs, f"invented hop {a}->{b}"
     finally:
         db.close()

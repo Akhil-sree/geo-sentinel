@@ -3,8 +3,10 @@ risk-weighted edges, route explanation."""
 
 import heapq
 import math
+
 from sqlalchemy.orm import Session
-from app.models_db import RoadSegment, Zone, RiskScore
+
+from app.models_db import RiskScore, RoadSegment, Zone
 
 # Status penalties — configurable
 STATUS_PENALTY = {
@@ -100,8 +102,8 @@ def _heuristic(zones, node, target):
 def astar(graph, zones, source, target):
     """A* algorithm. Returns (cost, path, edges)."""
     open_set = [(0, source)]
-    came_from = {n: None for n in graph}
-    edge_from = {n: None for n in graph}
+    came_from = dict.fromkeys(graph)
+    edge_from = dict.fromkeys(graph)
     g_score = {n: float("inf") for n in graph}
     g_score[source] = 0
 
@@ -136,8 +138,8 @@ def astar(graph, zones, source, target):
 def dijkstra(graph, source, target):
     """Dijkstra fallback. Returns (cost, path, edges)."""
     dist = {n: float("inf") for n in graph}
-    prev = {n: None for n in graph}
-    prev_edge = {n: None for n in graph}
+    prev = dict.fromkeys(graph)
+    prev_edge = dict.fromkeys(graph)
     dist[source] = 0
     pq = [(0, source)]
 
@@ -390,7 +392,6 @@ def _explain_route(path, zones, edges, risk_map, mode, algorithm):
     why = []
     tradeoffs = []
 
-    blocked_avoided = [e for e in edges if e.status != "OPEN"]
     open_roads = [e for e in edges if e.status == "OPEN"]
     damaged_used = [e for e in edges if e.status == "DAMAGED"]
     under_repair_used = [e for e in edges if e.status == "UNDER_REPAIR"]

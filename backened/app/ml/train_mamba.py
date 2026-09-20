@@ -29,12 +29,12 @@ def main():
     import torch.nn as nn
     torch.manual_seed(SEED)
     np.random.seed(SEED)
-    from app.ml.sequences import build_sequences
-    from app.ml.mamba_model import SelectiveSSMCell, SEQ_LEN, D_IN
+    from sklearn.metrics import brier_score_loss, confusion_matrix, precision_recall_fscore_support, roc_auc_score
+
     from app.ml import registry
     from app.ml.calibration import expected_calibration_error
-    from sklearn.metrics import (precision_recall_fscore_support, roc_auc_score,
-                                 brier_score_loss, confusion_matrix)
+    from app.ml.mamba_model import D_IN, SEQ_LEN, SelectiveSSMCell
+    from app.ml.sequences import build_sequences
 
     t_vals = list(range(72, 169, 6))
     Xtr, ytr, _, mtr = build_sequences(TRAIN_ZONES, t_vals)
@@ -51,7 +51,7 @@ def main():
     Xva_t = torch.tensor(Xva, device=dev)
 
     best_val, best_state, wait = float("inf"), None, 0
-    for ep in range(EPOCHS):
+    for ep in range(EPOCHS):  # noqa: B007 — ep intentionally reused post-loop for epochs_run reporting
         model.train()
         opt.zero_grad()
         loss_fn(model(Xtr_t).squeeze(), ytr_t).backward()

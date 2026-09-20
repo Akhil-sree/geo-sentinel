@@ -16,11 +16,10 @@ the illustrative check reports agreement at 0.2/0.8, 0.4/0.6, 0.6/0.4 so the
 choice is examined, not assumed.
 """
 import numpy as np
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.metrics import average_precision_score, brier_score_loss, precision_recall_fscore_support, roc_auc_score
 from sklearn.model_selection import GroupKFold, cross_val_predict
-from sklearn.metrics import (precision_recall_fscore_support, roc_auc_score,
-                             average_precision_score, brier_score_loss)
 
 
 def _row(y, proba):
@@ -44,9 +43,9 @@ def _row(y, proba):
 
 def run_ablation():
     from app.database import SessionLocal
-    from app.models_db import Zone
-    from app.ml.dataset import build_event_dataset, check_leakage, FEATURES
     from app.ml import registry
+    from app.ml.dataset import build_event_dataset, check_leakage
+    from app.models_db import Zone
 
     db = SessionLocal()
     zones = db.query(Zone).all()
@@ -101,14 +100,13 @@ def run_ablation():
 
 def _illustrative():
     """Real pipeline outputs (t=168) vs seed HIGH labels — machinery demo."""
-    from app.services.sim import run_pipeline
     from app.seed import ZONES
+    from app.services.sim import run_pipeline
     label = {z["id"]: (1 if z["label"] == 2 else 0) for z in ZONES}
     try:
         pipe = {r["zone_id"]: r for r in run_pipeline(168)}
     except Exception as e:
         return {"status": "pipeline failed", "error": str(e)[:150]}
-    from app.ml.fusion import fuse
     rows = {}
     for sw, dw in [(0.2, 0.8), (0.4, 0.6), (0.6, 0.4)]:
         agree_s = agree_d = agree_f = n = 0

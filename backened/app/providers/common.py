@@ -3,13 +3,13 @@
 Every provider response must map to this metadata so the UI/API can
 honestly distinguish LIVE / CACHED / SIMULATED / STALE / UNAVAILABLE.
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def envelope(source: str, source_type: str, observed_at: str | None,
              is_live: bool, is_simulated: bool, quality: str,
              status: str, raw_reference: str = "") -> dict:
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     return {
         "source": source,
         "source_type": source_type,  # rainfall | soil_moisture | satellite | terrain | history
@@ -50,10 +50,10 @@ def parse_ts(ts, *, max_age_days: float = 10.0, max_future_h: float = 2.0):
     try:
         dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
     except (ValueError, TypeError):
         return None
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if dt > now + timedelta(hours=max_future_h):
         return None
     if dt < now - timedelta(days=max_age_days):
@@ -90,8 +90,9 @@ def trim_observations(db, rain_days: float = 10.0, soil_days: float = 10.0,
     (matches parse_ts gates). Live history still accumulates within the
     window — trim only removes expired rows."""
     from datetime import timedelta
-    from app.models_db import RainfallObservation, SoilMoistureObservation, SARObs
-    now = datetime.now(timezone.utc)
+
+    from app.models_db import RainfallObservation, SARObs, SoilMoistureObservation
+    now = datetime.now(UTC)
     out = {}
     for model, col, days, key in (
             (RainfallObservation, "timestamp", rain_days, "rainfall"),

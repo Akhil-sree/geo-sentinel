@@ -17,6 +17,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 import torch  # FIRST, always: sklearn's OpenMP load order otherwise perturbs
+
 # torch numerics run-to-run (measured: identical seed+code diverged in F1).
 # Every training entry point in this repo follows torch-first ordering.
 
@@ -27,6 +28,7 @@ PATIENCE = 6
 
 def load_v2():
     import csv
+
     import numpy as np
     base = os.path.join(os.path.dirname(__file__), "..", "..", "data")
     z = np.load(os.path.join(base, "processed", "sequences_v2.npz"),
@@ -49,11 +51,11 @@ def focal_loss(p, y, gamma=2.0, alpha=0.5):
 
 def main():
     import numpy as np
-    from sklearn.model_selection import GroupKFold
-    from sklearn.metrics import (precision_recall_fscore_support,
-                                 average_precision_score, brier_score_loss)
-    from app.ml.mamba_model import SelectiveSSMCell
     import torch.nn as nn
+    from sklearn.metrics import average_precision_score, brier_score_loss, precision_recall_fscore_support
+    from sklearn.model_selection import GroupKFold
+
+    from app.ml.mamba_model import SelectiveSSMCell
 
     X, y, zids, _, groups = load_v2()
     districts = groups

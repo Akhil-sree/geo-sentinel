@@ -1,6 +1,11 @@
 """Image validation and preprocessing for SegFormer input."""
 from io import BytesIO
-from .config import VISION_ALLOWED_MIME, VISION_MAX_FILE_SIZE_MB, VISION_INPUT_SIZE
+from typing import TYPE_CHECKING
+
+from .config import VISION_ALLOWED_MIME, VISION_INPUT_SIZE, VISION_MAX_FILE_SIZE_MB
+
+if TYPE_CHECKING:  # numpy stays a soft runtime dep (imported lazily below)
+    import numpy as np
 
 
 def validate_image(content: bytes, content_type: str) -> dict:
@@ -24,7 +29,6 @@ def validate_image(content: bytes, content_type: str) -> dict:
 def preprocess(content: bytes):
     """Convert image bytes to model-ready tensor. Returns (pil_image, input_tensor)."""
     from PIL import Image
-    import numpy as np
 
     img = Image.open(BytesIO(content)).convert("RGB")
     img_resized = img.resize(VISION_INPUT_SIZE, Image.BILINEAR)

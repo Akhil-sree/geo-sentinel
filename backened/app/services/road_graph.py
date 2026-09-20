@@ -89,7 +89,7 @@ def _load_roads():
     if not ROADS_GEOJSON_PATH.exists():
         return []
     import json
-    with open(ROADS_GEOJSON_PATH, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON_PATH, encoding="utf-8") as f:
         data = json.load(f)
     return data.get("features", [])
 
@@ -210,7 +210,7 @@ def _build_graph_raw():
     edge_data = {}
     edge_counter = 0
 
-    for start_idx, end_idx, fi in road_sequences:
+    for start_idx, _end_idx, fi in road_sequences:
         feat = roads[fi]
         props = feat["properties"]
         road_id = props.get("road_id")
@@ -406,9 +406,7 @@ def find_route(origin_lat, origin_lng, dest_lat, dest_lng):
 
                 # If current node is near start and next node is near end => forward
                 # If current node is near end and next node is near start => backward
-                if dist_end_cur < dist_start_cur and dist_start_next < dist_end_next:
-                    edge_coords = list(reversed(coords))
-                elif dist_start_next > dist_end_next and dist_start_cur > dist_end_cur:
+                if dist_end_cur < dist_start_cur and dist_start_next < dist_end_next or dist_start_next > dist_end_next and dist_start_cur > dist_end_cur:
                     edge_coords = list(reversed(coords))
                 else:
                     edge_coords = coords
@@ -436,9 +434,7 @@ def find_route(origin_lat, origin_lng, dest_lat, dest_lng):
     # skip B unless it's a genuine longer detour).
     deduped = []
     for pt in raw_geometry:
-        if not deduped:
-            deduped.append(pt)
-        elif abs(deduped[-1][0] - pt[0]) > _FLOAT_TOL or abs(deduped[-1][1] - pt[1]) > _FLOAT_TOL:
+        if not deduped or abs(deduped[-1][0] - pt[0]) > _FLOAT_TOL or abs(deduped[-1][1] - pt[1]) > _FLOAT_TOL:
             deduped.append(pt)
 
     # Smooth zigzags: if deduped[i] reverses direction from deduped[i-2]->deduped[i-1],
@@ -466,7 +462,7 @@ def find_route(origin_lat, origin_lng, dest_lat, dest_lng):
     # Find blocked roads that are near the route path (avoided roads)
     path_node_set = set(path_nodes)
     blocked_avoided = []
-    for eid, edge in edges.items():
+    for _eid, edge in edges.items():
         if edge["status"] != "BLOCKED":
             continue
         # Check if any endpoint of this blocked road is on the path

@@ -1,6 +1,7 @@
 """Vision observation service — compare visual evidence with existing risk."""
 from sqlalchemy.orm import Session
-from app.models_db import Zone, RiskScore
+
+from app.models_db import RiskScore, Zone
 
 
 def corroborate(db: Session, zone_id: str, observation_severity: str, confidence: float) -> dict:

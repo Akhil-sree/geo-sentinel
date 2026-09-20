@@ -5,9 +5,11 @@ POST /api/alerts/evaluate. Never spams: per-zone cooldown
 (ALERT_COOLDOWN_MIN, default 360) + severity-escalation-only resend.
 """
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy.orm import Session
-from app.models_db import Alert, RiskScore
+
+from app.models_db import Alert
 
 COOLDOWN_MIN = float(os.getenv("ALERT_COOLDOWN_MIN", "360"))
 SEV_RANK = {"LOW": 0, "MODERATE": 1, "HIGH": 2, "VERY_HIGH": 3}
@@ -15,9 +17,9 @@ SEV_RANK = {"LOW": 0, "MODERATE": 1, "HIGH": 2, "VERY_HIGH": 3}
 
 def auto_evaluate_alerts(db: Session) -> dict:
     try:
-        from app.services.sim import run_pipeline
         from app.alerts.sms import dispatch_alert
         from app.models_db import Zone
+        from app.services.sim import run_pipeline
         scores = run_pipeline(168)
         fired, skipped = [], []
         for s in scores:
@@ -26,7 +28,7 @@ def auto_evaluate_alerts(db: Session) -> dict:
             last = (db.query(Alert).filter(Alert.zone_id == s["zone_id"])
                     .order_by(Alert.created_at.desc()).first())
             if last and last.created_at:
-                age = datetime.now(timezone.utc) - last.created_at.replace(tzinfo=timezone.utc)
+                age = datetime.now(UTC) - last.created_at.replace(tzinfo=UTC)
                 escalated = SEV_RANK.get(s["severity"], 0) > SEV_RANK.get(last.severity, 0)
                 if age < timedelta(minutes=COOLDOWN_MIN) and not escalated:
                     skipped.append({"zone": s["zone_id"], "reason": "cooldown"})

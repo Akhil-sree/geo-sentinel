@@ -12,14 +12,14 @@ Nothing here enters the production risk path (quarantined by design —
 see services/sim.py); features are stored for GIS display + future use.
 """
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models_db import SatScene, SatelliteFeature, Zone
+from app.models_db import SatelliteFeature, SatScene, Zone
 
 router = APIRouter()
 
@@ -80,7 +80,7 @@ def sat_change(body: ChangeIn, db: Session = Depends(get_db)):
     delta = round(body.post_score - body.pre_score, 4)
     candidate = bool(delta >= body.threshold)
     feat = SatelliteFeature(zone_id=body.zone_id,
-                            acquisition_date=datetime.now(timezone.utc),
+                            acquisition_date=datetime.now(UTC),
                             scene_id=body.scene_id, change_score=body.post_score,
                             candidate=candidate,
                             status=("OBSERVED" if st["state"] == "CONFIGURED" else "DEMO"),

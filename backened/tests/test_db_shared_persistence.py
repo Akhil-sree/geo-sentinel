@@ -19,6 +19,7 @@ def test_resolve_relative_sqlite_is_absolute_and_cwd_independent():
 
 def test_resolve_absolute_sqlite_passes_through():
     import posixpath
+
     from app.database import resolve_database_url
     resolved = resolve_database_url("sqlite:////data/geo_sentinel.db")
     path = resolved[len("sqlite:///"):]

@@ -7,13 +7,16 @@
   ML: metrics are what they are; winner stays DEMO until the promotion
   gate (n>=50, validated F1/PR-AUC, calibration) passes.
 """
-import os, sys
+import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.database import SessionLocal
+from app.ml.rf_model import MODEL_DIR, VERSION, train
 from app.models_db import Zone
-from app.ml.rf_model import train, MODEL_DIR, VERSION
 from app.seed import ZONES
+
 
 def main():
     db = SessionLocal()
@@ -33,19 +36,22 @@ def main_event(tag="v2"):
     tag=v2: terrain6. tag=v3: terrain6 + 2 REAL GSI spatial features
     (same 24 samples — feature enrichment, not sample inflation).
     Model ids gain a _v3 suffix for v3 so the registry keeps both."""
-    import numpy as np
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.ensemble import RandomForestClassifier
-    from sklearn.model_selection import GroupKFold, cross_val_predict
     from sklearn.calibration import CalibratedClassifierCV
-    from sklearn.ensemble import GradientBoostingClassifier
-    from sklearn.metrics import (precision_recall_fscore_support, roc_auc_score,
-                                 average_precision_score, brier_score_loss,
-                                 confusion_matrix, accuracy_score)
-    from app.ml.dataset import (build_event_dataset, check_leakage, FEATURES,
-                                    V3_FEATURES)
+    from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import (
+        accuracy_score,
+        average_precision_score,
+        brier_score_loss,
+        confusion_matrix,
+        precision_recall_fscore_support,
+        roc_auc_score,
+    )
+    from sklearn.model_selection import GroupKFold, cross_val_predict
+
     from app.ml import registry
     from app.ml.calibration import expected_calibration_error, reliability_bins
+    from app.ml.dataset import FEATURES, V3_FEATURES, build_event_dataset, check_leakage
 
     db = SessionLocal()
     zones = db.query(Zone).all()

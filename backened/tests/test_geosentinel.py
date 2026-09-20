@@ -15,19 +15,27 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "data"))
 
 from gs_common import (  # noqa: E402
-    RF_CSV, MAMBA_NPZ, MAMBA_CSV, normalize_event_id, valid_lonlat,
-    validate_rf_rows, validate_mamba_npz, segformer_gate, event_groups_rf,
+    MAMBA_CSV,
+    MAMBA_NPZ,
+    RF_CSV,
     SEGFORMER_STATUS,
+    event_groups_rf,
+    normalize_event_id,
+    segformer_gate,
+    valid_lonlat,
+    validate_mamba_npz,
+    validate_rf_rows,
 )
 
-RF_ROWS = list(csv.DictReader(open(RF_CSV, encoding="utf-8")))
+with open(RF_CSV, encoding="utf-8") as _rf_fh:
+    RF_ROWS = list(csv.DictReader(_rf_fh))
 
 
 def test_event_id_normalization():
     assert normalize_event_id("LS_10,985") == "10985"
     assert normalize_event_id("10,985") == "10985"
     assert normalize_event_id("10985") == "10985"
-    assert normalize_event_id("BG_001__10,985".split("__")[-1]) == "10985"
+    assert normalize_event_id(["BG_001", "10,985"][-1]) == "10985"
     with pytest.raises(ValueError):
         normalize_event_id("")
 
@@ -59,9 +67,10 @@ def test_rainfall_qc_gates_respected():
 
 def test_crs_guard_state_boundary_is_projected():
     import json as _json
-    gj = _json.load(open(os.path.join(
+    with open(os.path.join(
         os.path.dirname(RF_CSV), "..", "..", "..", "state_NWIC.GeoJSON"),
-        encoding="utf-8"))
+        encoding="utf-8") as _gj_fh:
+        gj = _json.load(_gj_fh)
     crs = gj.get("crs", {}).get("properties", {}).get("name", "")
     assert "7755" in crs, "boundary CRS assumption changed — re-verify reprojection need"
 
@@ -150,7 +159,8 @@ def test_gis_outputs_crs_and_dims():
     _raw = _zl.decompress(buf[_tags[273]:_tags[273] + _tags[279]])
     _g = np.frombuffer(_raw, dtype="<f4").reshape(_tags[257], _tags[256])
     assert _g.shape[0] > 10 and (_g > -9999).sum() > 1000  # parses + has data
-    gj = json.load(open(gjp, encoding="utf-8"))
+    with open(gjp, encoding="utf-8") as _gjp_fh:
+        gj = json.load(_gjp_fh)
     assert gj["crs"]["properties"]["name"] == "EPSG:4326"
     for f in gj["features"]:
         lon, lat = f["geometry"]["coordinates"]
@@ -165,17 +175,20 @@ def test_segformer_blocked():
     blocked = os.path.join(os.path.dirname(__file__), "..", "models",
                            "segformer", "BLOCKED.md")
     if os.path.exists(blocked):
-        assert "BLOCKED" in open(blocked, encoding="utf-8").read()
+        with open(blocked, encoding="utf-8") as _b_fh:
+            assert "BLOCKED" in _b_fh.read()
 
 
 def test_fusion_label_order_invariant():
     # Regression (2026-09-18): NPZ row order != CSV order; fusion must use
     # CSV-ordered labels, never NPZ-order (5.4% silent misalignment before).
     import csv as _csv
+
     import numpy as _np
     d = _np.load(MAMBA_NPZ, allow_pickle=False)
     npz_sids = [str(s) for s in d["sequence_ids"]]
-    rows = list(_csv.DictReader(open(MAMBA_CSV, encoding="utf-8")))
+    with open(MAMBA_CSV, encoding="utf-8") as _mamba_fh:
+        rows = list(_csv.DictReader(_mamba_fh))
     csv_sids = []
     for r in rows:
         if not csv_sids or csv_sids[-1] != r["Sequence_ID"]:

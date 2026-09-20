@@ -4,15 +4,18 @@ risk = STATIC_WEIGHT * static + DYNAMIC_WEIGHT * dynamic   (hazard)
 Exposure kept separate from hazard. Extreme-event rule may escalate advisory.
 All thresholds from risk_thresholds.yaml — calibration parameters.
 """
-from ..config import THRESHOLDS, STATIC_WEIGHT, DYNAMIC_WEIGHT
+from ..config import DYNAMIC_WEIGHT, STATIC_WEIGHT, THRESHOLDS
 
 FUSION_VERSION = "fusion_v1"
 
 def classify(score: float) -> str:
     b = THRESHOLDS["classes"]["boundaries"]
-    if score < b[0]: return "LOW"
-    if score < b[1]: return "MODERATE"
-    if score < b[2]: return "HIGH"
+    if score < b[0]:
+        return "LOW"
+    if score < b[1]:
+        return "MODERATE"
+    if score < b[2]:
+        return "HIGH"
     return "VERY_HIGH"
 
 def escalation_rule(static_score, r24, r72, soil_moisture):

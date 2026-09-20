@@ -11,8 +11,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.database import Base
 import app.models_db as M
+from app.database import Base
 
 
 def _mem_db():
@@ -22,8 +22,9 @@ def _mem_db():
 
 
 def _seed_zones(db):
-    from app.seed import ZONES, EVENTS
     import datetime as dt
+
+    from app.seed import EVENTS, ZONES
     for zd in ZONES:
         z = {k: v for k, v in zd.items() if k not in ("label", "lat", "lng")}
         z["latitude"], z["longitude"] = zd["lat"], zd["lng"]
@@ -42,6 +43,7 @@ def test_seed_flushes_zones_before_dependents():
     never enforces it; PostgreSQL rejected emergency_tasks on a fresh DB).
     seed() must persist zones before any zone-referencing table."""
     from sqlalchemy import event
+
     from app.seed import seed
     e = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(e)
@@ -64,8 +66,8 @@ def test_seed_flushes_zones_before_dependents():
 
 def test_mock_ingestion_persists_canonical_zones():
     from app.providers.imd import MockIMDAdapter
-    from app.providers.smap import MockSMAPAdapter
     from app.providers.sentinel1 import MockSentinel1Adapter
+    from app.providers.smap import MockSMAPAdapter
     db = _mem_db()
     _seed_zones(db)
     assert MockIMDAdapter().run(db)["status"] == "OK"
@@ -111,8 +113,8 @@ LIVE = pytest.mark.skipif(os.getenv("LIVE_NET_TEST") != "1",
 @LIVE
 def test_live_openmeteo_ingestion_verified():
     import time
-    from app.providers.openmeteo import (OpenMeteoRainAdapter,
-                                         OpenMeteoSoilAdapter, provider_health)
+
+    from app.providers.openmeteo import OpenMeteoRainAdapter, OpenMeteoSoilAdapter, provider_health
     db = _mem_db()
     _seed_zones(db)
     t0 = time.time()
@@ -136,7 +138,6 @@ def test_live_openmeteo_ingestion_verified():
 
 def test_ingestion_rerun_is_idempotent():
     from app.providers.imd import MockIMDAdapter
-    from app.providers.smap import MockSMAPAdapter
     db = _mem_db()
     _seed_zones(db)
     assert MockIMDAdapter().run(db)["status"] == "OK"
@@ -165,7 +166,7 @@ def test_alert_dispatch_idempotent_within_hour():
 
 
 def test_xai_permutation_measured_and_labeled():
-    from app.ml.xai import permutation_bundle, explain
+    from app.ml.xai import explain, permutation_bundle
     b = permutation_bundle()
     assert b and "slope" in b["importances"]
     assert b["source"].startswith("permutation on events_v2")
@@ -180,6 +181,7 @@ def test_xai_permutation_measured_and_labeled():
 
 
 def test_mamba_training_pipeline_registers():
+    pytest.importorskip("torch", reason="torch is optional (CPU wheel installed separately)")
     from app.ml.train_mamba import main as train_mamba
     out = train_mamba()
     assert out["metrics"]["n_train"] > 0 and out["metrics"]["n_val"] > 0
@@ -194,6 +196,7 @@ def test_mamba_training_pipeline_registers():
 
 def test_provider_failure_is_stale_not_mock(monkeypatch):
     import httpx
+
     from app.providers.openmeteo import OpenMeteoRainAdapter
 
     def _boom(*a, **k):
@@ -209,7 +212,7 @@ def test_provider_failure_is_stale_not_mock(monkeypatch):
     assert db.query(M.RainfallObservation).filter(
         M.RainfallObservation.source == "OPENMETEO_LIVE").count() == 0
     logs = db.query(M.IngestionLog).all()
-    assert any(l.status == "STALE" for l in logs)
+    assert any(log.status == "STALE" for log in logs)
     db.close()
 
 
@@ -243,7 +246,7 @@ def test_event_models_measured_and_demo():
 
 
 def test_fusion_declares_weights_and_version():
-    from app.ml.fusion import fuse, FUSION_VERSION
+    from app.ml.fusion import FUSION_VERSION, fuse
     f = fuse(0.6, 0.7, 100.0, 250.0, 0.6)
     assert f["fusion_version"] == FUSION_VERSION
     assert f["weights"] == {"static": 0.4, "dynamic": 0.6}
@@ -254,6 +257,7 @@ def test_fusion_declares_weights_and_version():
 
 def test_secretbox_roundtrip_and_passthrough(monkeypatch):
     from cryptography.fernet import Fernet
+
     from app.auth import SecretBox
     assert SecretBox.reveal("plain") == "plain"
     monkeypatch.setenv("FERNET_KEY", Fernet.generate_key().decode())
@@ -266,6 +270,7 @@ def test_role_gating(monkeypatch):
     monkeypatch.setenv("API_KEYS", "op-key:operator,view-key:viewer")
     monkeypatch.delenv("ADMIN_API_KEY", raising=False)
     import importlib
+
     import app.auth as auth
     importlib.reload(auth)
     from app.main import app
@@ -284,6 +289,7 @@ def test_role_gating(monkeypatch):
 def test_http_e2e_chain():
     """ingest -> risk -> GIS -> alert -> cooldown -> report -> moderation."""
     from fastapi.testclient import TestClient
+
     from app.main import app
     c = TestClient(app)
     assert c.get("/health").json()["status"] == "ok"
@@ -351,6 +357,7 @@ def test_http_e2e_chain():
 def test_cell_grid_batched_and_deterministic():
     """cell-grid: batched RF predict matches row-wise math + stable across calls."""
     from fastapi.testclient import TestClient
+
     from app.main import app
     from app.ml.rf_model import RFModel
     c = TestClient(app)

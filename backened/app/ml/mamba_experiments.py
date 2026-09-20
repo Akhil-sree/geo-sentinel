@@ -22,11 +22,11 @@ CONFIGS = [(48, 8), (24, 8), (48, 16)]
 def run_config(seq_len, d_state):
     import numpy as np
     import torch.nn as nn
+    from sklearn.metrics import average_precision_score, brier_score_loss, precision_recall_fscore_support
     from sklearn.model_selection import GroupKFold
-    from sklearn.metrics import (precision_recall_fscore_support,
-                                 average_precision_score, brier_score_loss)
-    from app.ml.mamba_model import SelectiveSSMCell
+
     from app.ml.cv_mamba import load_v2
+    from app.ml.mamba_model import SelectiveSSMCell
 
     X, y, _, _, groups = load_v2()
     X = X[:, -seq_len:, :]

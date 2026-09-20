@@ -1,13 +1,12 @@
 """NER pipeline unit tests (SIH §44): parsing, NER filter, date classes,
 deduplication, alignment, sampling, versioning, registry gate. No network —
 all fixtures inline (honest small-scale checks of pipeline logic)."""
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "data"))
 
-from ner_common import (in_ner, valid_coords, classify_date, dedup_records,
-                        POSITIVE, NEGATIVE)
+from ner_common import NEGATIVE, POSITIVE, classify_date, dedup_records, in_ner, valid_coords
 
 
 def test_ner_filter_bounds():
@@ -78,7 +77,7 @@ def test_registry_gate_blocks_small_n(tmp_path, monkeypatch):
     # isolated registry file: tests must never pollute models/registry.json
     fake = str(tmp_path / "registry.json")
     monkeypatch.setattr(reg, "REGISTRY_PATH", fake)
-    e = reg.register(model_id="__probe__", version="t1", dataset_version="ner_probe",
+    _e = reg.register(model_id="__probe__", version="t1", dataset_version="ner_probe",
                      feature_version="v", algorithm="Probe", parameters={},
                      metrics={"f1": 0.99, "recall": 0.99, "brier": 0.01,
                               "n_samples": 10, "leakage_check_passed": True},
@@ -93,13 +92,15 @@ def test_dataset_version_immutable():
     meta = os.path.join(os.path.dirname(__file__), "..", "data",
                         "metadata", "ner_training_ner_v1.json")
     assert os.path.exists(meta), "build the dataset first"
-    d = json.load(open(meta, encoding="utf-8"))
+    with open(meta, encoding="utf-8") as _meta_fh:
+        d = json.load(_meta_fh)
     assert d["checksum"] and d["feature_version"] == "nerfeat_v1"
     assert d["positive"] >= 1 and d["negative"] >= 1
 
 
 def test_datasets_api_shapes():
     from fastapi.testclient import TestClient
+
     from app.main import app
     c = TestClient(app)
     assert c.get("/api/datasets").status_code == 200

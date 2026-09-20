@@ -24,15 +24,13 @@ from fastapi import (
     Request,
     UploadFile,
 )
-
 from sqlalchemy.orm import Session
 
-from ..database import get_db
-from ..models_db import CitizenReport, AuditLog
-from ..schemas import ReportIn
-from ..auth import rate_limit, _client_ip
+from ..auth import _client_ip, rate_limit
 from ..config import settings
-
+from ..database import get_db
+from ..models_db import AuditLog, CitizenReport
+from ..schemas import ReportIn
 
 router = APIRouter()
 
@@ -140,13 +138,13 @@ def create_report(
             client_timestamp = dt.datetime.fromisoformat(
                 r.client_timestamp
             )
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=422,
                 detail="Invalid client_timestamp. Use ISO-8601 format.",
-            )
+            ) from e
     else:
-        client_timestamp = dt.datetime.now(dt.timezone.utc)
+        client_timestamp = dt.datetime.now(dt.UTC)
 
     # ---------------------------------------------------------
     # Create report
@@ -164,7 +162,7 @@ def create_report(
         landslide_type=r.landslide_type,
         severity_observed=r.severity_observed,
         client_timestamp=client_timestamp,
-        synced_at=dt.datetime.now(dt.timezone.utc),
+        synced_at=dt.datetime.now(dt.UTC),
         status="PENDING",
     )
 
@@ -271,6 +269,7 @@ def upload_media(
     # ---------------------------------------------------------
 
     import hashlib as _hl
+
     from app.models_db import MediaHash
     digest = _hl.sha256(data).hexdigest()
     dupe = db.query(MediaHash).filter(MediaHash.sha256 == digest).first()
@@ -367,7 +366,7 @@ def report_geo_match(
     """Match a report to the nearest zone + nearby roads + that zone's
     latest risk context. Reviewer assistance only — a near-high-risk-zone
     report is still unverified until a human moderates it."""
-    from ..models_db import Zone, RoadSegment, RiskScore
+    from ..models_db import RiskScore, RoadSegment, Zone
     rep = db.get(CitizenReport, report_id)
     if not rep:
         raise HTTPException(status_code=404, detail="Report not found")
@@ -431,7 +430,7 @@ def sync_report(
             ),
         )
 
-    rep.synced_at = dt.datetime.now(dt.timezone.utc)
+    rep.synced_at = dt.datetime.now(dt.UTC)
 
     db.commit()
 

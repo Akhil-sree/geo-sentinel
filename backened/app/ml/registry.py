@@ -8,7 +8,7 @@ are documented parameters, not universal constants.
 import hashlib
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 REGISTRY_PATH = os.path.join(os.path.dirname(__file__), "..", "..",
                              "models", "registry.json")
@@ -69,7 +69,7 @@ def register(*, model_id: str, version: str, dataset_version: str,
              else metrics.get("n_samples"),
              "feature_schema": feature_schema,
              "feature_version": feature_version,
-             "training_timestamp": datetime.now(timezone.utc).isoformat(),
+             "training_timestamp": datetime.now(UTC).isoformat(),
              "validation_strategy": validation_method,
              "validation_method": validation_method,  # back-compat alias
              "algorithm": algorithm, "parameters": parameters,

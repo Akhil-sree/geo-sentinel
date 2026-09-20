@@ -4,9 +4,11 @@ GET /api/data-status → every source labeled LIVE / CACHED / SIMULATED /
 STALE / UNAVAILABLE with is_live/is_simulated flags. Frontend renders
 these verbatim — never infer liveness from mere data presence.
 """
+import os
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-import os
+
 from app.database import get_db
 from app.ingest.runner import provider_states
 from app.ml.mamba_model import temporal_status
@@ -136,8 +138,9 @@ def model_monitor(db: Session = Depends(get_db)):
     counts missing features, and checks provider freshness. Any significant
     drift returns MODEL MONITORING WARNING — promotion stays manual.
     """
-    from app.models_db import RiskScore, RainfallObs, SoilMoistureObs
     from datetime import timedelta
+
+    from app.models_db import RainfallObs, RiskScore, SoilMoistureObs
     now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
     recent = db.query(RiskScore).filter(
         RiskScore.timestamp >= now - timedelta(hours=24)).all()
@@ -180,8 +183,8 @@ def metrics(db: Session = Depends(get_db)):
     """Operational metrics (counts + uptime + request tracing) — request
     counters are in-memory since process start (see app/observability)."""
     import time as _t
-    from app.models_db import (Alert, CitizenReport, RiskScore, RainfallObs,
-                               SoilMoistureObs, SensorReading)
+
+    from app.models_db import Alert, CitizenReport, RainfallObs, RiskScore, SensorReading, SoilMoistureObs
     from app.observability import snapshot
     out = {"uptime_process_s": round(_t.perf_counter(), 1),
            "risk_scores": db.query(RiskScore).count(),

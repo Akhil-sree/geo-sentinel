@@ -1,5 +1,4 @@
 """Geospatial output — convert pixel masks to GeoJSON where possible."""
-import json
 
 
 def mask_to_geojson(

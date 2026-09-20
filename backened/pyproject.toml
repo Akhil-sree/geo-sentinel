@@ -1,6 +1,17 @@
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+exclude = [
+    ".venv",
+    "__pycache__",
+    ".pytest_cache",
+    "node_modules",
+    "dist",
+    "build",
+    "*.egg-info",
+]
+
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "F",   # pyflakes
@@ -17,25 +28,11 @@ ignore = [
     "SIM102", # nested if statements
     "SIM103", # if/else returning True/False
 ]
-per-file-ignores = {
-    "tests/*": ["S101", "B011"],  # assert in tests, assert False
-    "app/ml/*": ["S101"],  # assert in ML code
-    "scripts/*": ["S101", "T201"],  # assert and print in scripts
-}
-exclude = [
-    ".venv",
-    "__pycache__",
-    ".pytest_cache",
-    "node_modules",
-    "dist",
-    "build",
-    "*.egg-info",
-]
 
-[tool.ruff.isort]
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "B011"]  # assert in tests, assert False
+"app/ml/*" = ["S101"]  # assert in ML code
+"scripts/*" = ["S101", "T201"]  # assert and print in scripts
+
+[tool.ruff.lint.isort]
 known-first-party = ["app"]
-import-headings = {
-    "std": "Standard Library",
-    "third": "Third Party",
-    "first": "First Party",
-}

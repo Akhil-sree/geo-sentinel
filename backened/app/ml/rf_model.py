@@ -11,16 +11,14 @@ Artifacts are stored under:
 Each model version is stored separately.
 """
 
-import os
-import json
 import datetime
+import json
+import os
 
 import joblib
 import numpy as np
-
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GroupKFold, cross_val_score
-
 
 FEATURES = [
     "slope",
@@ -58,8 +56,8 @@ def _to_features(z) -> list[float]:
     def _num(value, name, lo=None, hi=None):
         try:
             v = float(value)
-        except (TypeError, ValueError):
-            raise ValueError(f"RF feature '{name}' is not numeric: {value!r}")
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"RF feature '{name}' is not numeric: {value!r}") from e
         if not math.isfinite(v):
             raise ValueError(f"RF feature '{name}' is not finite: {value!r}")
         if lo is not None and v < lo:
@@ -203,8 +201,8 @@ def train(
     )
 
     # Precision/recall/F1 (macro — imbalanced 3-class demo set; accuracy alone misleads)
-    from sklearn.model_selection import cross_val_predict
     from sklearn.metrics import precision_recall_fscore_support
+    from sklearn.model_selection import cross_val_predict
     try:
         y_pred = cross_val_predict(clf, X, y, cv=cv.split(X, y, groups=spatial_blocks))
         prec, rec, f1, _ = precision_recall_fscore_support(y, y_pred, average="macro", zero_division=0)
@@ -253,7 +251,7 @@ def train(
         "version": version,
 
         "training_date": datetime.datetime.now(
-            datetime.timezone.utc
+            datetime.UTC
         ).isoformat(),
 
         "features_used": FEATURES,
@@ -370,18 +368,11 @@ class RFModel:
         # Weighted expectation gives a value from 0 to 1.
         # -----------------------------------------------------
 
-        if classes:
-
-            score = sum(
-                p * c / 2.0
-                for p, c in zip(
-                    proba,
-                    classes,
-                )
-            )
-
-        else:
-            score = 0.0
+        score = (
+            sum(p * c / 2.0 for p, c in zip(proba, classes, strict=False))
+            if classes
+            else 0.0
+        )
 
         score = min(
             1.0,
@@ -396,6 +387,7 @@ class RFModel:
                 for c, p in zip(
                     classes,
                     proba,
+                    strict=False,
                 )
             },
 
@@ -418,6 +410,7 @@ class RFModel:
             for feature, importance in zip(
                 FEATURES,
                 self.model.feature_importances_,
+                strict=False,
             )
         }
 
@@ -427,7 +420,8 @@ def rf_status() -> dict:
     import json as _json
     meta_path = os.path.join(MODEL_DIR, VERSION, "metadata.json")
     try:
-        meta = _json.load(open(meta_path, encoding="utf-8"))
+        with open(meta_path, encoding="utf-8") as fh:
+            meta = _json.load(fh)
     except Exception:
         meta = {}
     n = int(meta.get("n_training_samples", 0) or 0)
@@ -448,7 +442,7 @@ def load_metrics(version: str = VERSION) -> dict:
     """Load stored training metadata / CV metrics."""
     metadata_path = os.path.join(MODEL_DIR, version, "metadata.json")
     if os.path.exists(metadata_path):
-        with open(metadata_path, "r", encoding="utf-8") as f:
+        with open(metadata_path, encoding="utf-8") as f:
             return json.load(f)
     return {
         "note": "Model not yet trained — metrics unavailable.",

@@ -24,6 +24,7 @@ VAL_ZONES = ["Z7", "Z8"]
 
 def load_real(tag="v1"):
     import csv
+
     import numpy as np
     base = os.path.join(os.path.dirname(__file__), "..", "..", "data")
     stem = "sequences_v2" if tag == "v2" else "sequences_v1"
@@ -46,7 +47,7 @@ def train_and_eval(tag="v1"):
     import torch.nn as nn
     torch.manual_seed(SEED)
     np.random.seed(SEED)
-    from app.ml.mamba_model import SelectiveSSMCell, SEQ_LEN, D_IN
+    from app.ml.mamba_model import D_IN, SEQ_LEN, SelectiveSSMCell
     Xtr, ytr, Xva, yva = load_real(tag)
     assert Xtr.shape[1:] == (SEQ_LEN, D_IN)
 
@@ -83,11 +84,15 @@ def train_and_eval(tag="v1"):
 
 
 def main(tag="v1"):
-    import numpy as np
     import torch
-    from sklearn.metrics import (precision_recall_fscore_support, roc_auc_score,
-                                 average_precision_score, brier_score_loss,
-                                 confusion_matrix)
+    from sklearn.metrics import (
+        average_precision_score,
+        brier_score_loss,
+        confusion_matrix,
+        precision_recall_fscore_support,
+        roc_auc_score,
+    )
+
     from app.ml import registry
     from app.ml.calibration import expected_calibration_error, reliability_bins
 

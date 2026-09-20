@@ -12,16 +12,15 @@ observation tables so the risk pipeline consumes them with source tags
 (SENSOR_*) instead of mock data. Rate-limited; mutating POSTs require
 operator+ when API keys are configured (open-demo otherwise).
 """
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth import rate_limit, require_role, _client_ip
+from app.auth import _client_ip, rate_limit, require_role
 from app.database import get_db
-from app.models_db import (Sensor, SensorReading, SoilMoistureObservation,
-                           RainfallObservation, Zone)
+from app.models_db import RainfallObservation, Sensor, SensorReading, SoilMoistureObservation, Zone
 
 router = APIRouter()
 
@@ -49,17 +48,17 @@ class ReadingIn(BaseModel):
 
 def _parse_ts(ts: str | None) -> datetime:
     if not ts:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
     try:
         d = datetime.fromisoformat(ts.replace("Z", "+00:00"))
         if d.tzinfo is None:
-            d = d.replace(tzinfo=timezone.utc)
-        now = datetime.now(timezone.utc)
+            d = d.replace(tzinfo=UTC)
+        now = datetime.now(UTC)
         if d > now + timedelta(hours=1) or d < now - timedelta(days=365):
             raise ValueError("timestamp out of range")
         return d
-    except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid timestamp")
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail="Invalid timestamp") from e
 
 
 def _nearest_zone(db: Session, lat, lng, fallback: str | None) -> str:
@@ -138,12 +137,12 @@ def post_soil(body: ReadingIn, request: Request,
 
 @router.get("/sensors")
 def list_sensors(db: Session = Depends(get_db)):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     out = []
     for s in db.query(Sensor).all():
         health = "OFFLINE"
         if s.last_seen:
-            last = s.last_seen.replace(tzinfo=timezone.utc) if s.last_seen.tzinfo is None else s.last_seen
+            last = s.last_seen.replace(tzinfo=UTC) if s.last_seen.tzinfo is None else s.last_seen
             age_h = (now - last).total_seconds() / 3600
             health = "ONLINE" if age_h < 6 else "STALE"
             s.status = health

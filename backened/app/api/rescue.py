@@ -1,7 +1,10 @@
 """Rescue route endpoint — real road-network A* routing from road_graph service."""
 
+import logging as _log
+
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
+
 from app.services.road_graph import find_route, get_blocked_road_ids
 
 router = APIRouter(tags=["rescue"])

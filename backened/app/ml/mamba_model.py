@@ -8,7 +8,8 @@ Mamba reference: Gu & Dao (2023). Use here: regional, sensor-free,
 zone-level early-warning CLASSIFICATION over environmental sequences —
 not displacement forecasting of instrumented slopes.
 """
-import os, json, math
+import logging as _log
+import math
 
 try:
     import torch
@@ -76,11 +77,14 @@ if TORCH:
 class MockTemporalModel(TemporalRiskModel):
     """Explicit fallback — an interpretable saturation heuristic. Flagged in
     /model/status so it is never mistaken for trained Mamba inference."""
-    def __init__(self): self.version = VERSION + "_mock"
+    def __init__(self):
+        self.version = VERSION + "_mock"
 
     def predict(self, sequence):
-        if not sequence: return {"dynamic_score": 0.1, "version": self.version, "backend": "mock"}
-        r72 = sequence[-1][2]; soil = sequence[-1][4]; schange = sequence[-1][5]
+        if not sequence:
+            return {"dynamic_score": 0.1, "version": self.version, "backend": "mock"}
+        r72 = sequence[-1][2]
+        schange = sequence[-1][5]
         base = 0.10 + 1.6 * r72 + 1.2 * max(0.0, schange)
         score = 1 / (1 + math.exp(-(base - 1.05) * 4))
         return {"dynamic_score": round(score, 4), "version": self.version,

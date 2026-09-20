@@ -8,7 +8,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
 
 jobs:
   backend:
@@ -37,6 +37,8 @@ jobs:
           pip install ruff
           ruff check app/ tests/
 
+      # Advisory only: the codebase is not yet fully type-clean, so mypy
+      # must not gate the build. Do not remove `|| true` without a type-clean pass.
       - name: Run type checking (mypy)
         run: |
           pip install mypy
@@ -98,7 +100,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check for broken links in markdown
-        run: |
-          pip install markdown-link-check
-          find . -name "*.md" -not -path "./node_modules/*" -exec markdown-link-check {} \; || true
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # Repo-native stdlib checker: validates repository-local markdown links
+      # (files + #anchors). External URLs are skipped by policy (flaky hosts
+      # must not gate CI). No dependencies to install, no `|| true`.
+      - name: Check repository-local markdown links
+        run: python .github/scripts/check_markdown_links.py

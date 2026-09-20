@@ -25,7 +25,9 @@ sys.path.insert(0, os.path.join(_BACKEND_DIR, "data"))  # ner_v2_features (docum
 import joblib  # noqa: E402
 import numpy as np  # noqa: E402
 
-from app.ml.fusion import classify  # fuse intentionally unused here (see assess_sequence)
+from app.ml.fusion import (  # noqa: E402 — sys.path setup above must run first
+    classify,  # fuse intentionally unused here (see assess_sequence)
+)
 
 MODELS_DIR = os.path.join(_BACKEND_DIR, "models")
 TERRAIN_COLS = ["Elevation_m", "Slope_deg", "Aspect_deg", "Curvature",
@@ -56,8 +58,9 @@ def full_rf_model():
 
 
 def rf_feature_schema():
-    meta = json.load(open(os.path.join(MODELS_DIR, "rf", "gs_v1",
-                                       "gs_rf.metadata.json"), encoding="utf-8"))
+    schema_path = os.path.join(MODELS_DIR, "rf", "gs_v1", "gs_rf.metadata.json")
+    with open(schema_path, encoding="utf-8") as fh:
+        meta = json.load(fh)
     return meta["features"]
 
 
@@ -65,8 +68,8 @@ def mamba_ensemble():
     """(models, scalers) for the 3 event-grouped folds."""
     def _build():
         sys.path.insert(0, os.path.join(_BACKEND_DIR, "app", "ml"))
-        from mamba_model import build_gs_ssm
         import torch
+        from mamba_model import build_gs_ssm
         models, scalers = [], []
         ckpt = os.path.join(MODELS_DIR, "mamba", "gs_v1", "checkpoints")
         for k in range(3):
@@ -118,7 +121,7 @@ def assess_tabular(features: dict):
     try:
         vec = [float(features[c]) for c in schema]
     except (KeyError, TypeError, ValueError) as e:
-        raise ValueError(f"tabular input must carry numeric {schema}: {e}")
+        raise ValueError(f"tabular input must carry numeric {schema}: {e}") from e
     s = float(full_rf_model().predict_proba([vec])[0, 1])
     return {"risk_score": round(s, 4), "risk_level": classify(s),
             "susceptibility": round(s, 4), "temporal_risk": None,

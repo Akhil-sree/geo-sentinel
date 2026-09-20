@@ -18,23 +18,22 @@ Provides:
 """
 
 import datetime as dt
+import logging as _log
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models_db import (
-    Zone,
-    RiskScore,
-    RainfallObservation,
-    SoilMoistureObservation,
-    LandslideEvent,
-)
-
-from ..services import sim
 from ..ml.mamba_model import get_temporal_model
-
+from ..models_db import (
+    LandslideEvent,
+    RainfallObservation,
+    RiskScore,
+    SoilMoistureObservation,
+    Zone,
+)
+from ..services import sim
 
 router = APIRouter()
 
@@ -139,9 +138,9 @@ def gis_provenance(db: Session = Depends(get_db)):
     Response shape is fixed; layers stay STATIC until real village/road/
     boundary/population datasets land.
     """
-    from app.seed import TERRAIN_META, GIS_META
+    from app.models_db import SatScene, TerrainDEM
     from app.providers.sentinel1 import SentinelSceneMetadataProvider
-    from app.models_db import TerrainDEM, SatScene
+    from app.seed import GIS_META, TERRAIN_META
     dem_n = db.query(TerrainDEM).count() if db else 0
     try:
         sat_n = db.query(SatScene).count() if db else 0
@@ -456,6 +455,7 @@ def zone_rainfall_windows(zone_id: str, db: Session = Depends(get_db)):
     intensity, antecedent — with Observed/Modeled/Scenario labeling."""
     _require_zone(db, zone_id)
     import pandas as pd
+
     from ..ml.features import compute_rainfall_features
     rows = (db.query(RainfallObservation)
             .filter(RainfallObservation.zone_id == zone_id)
@@ -485,7 +485,7 @@ def zone_rainfall_windows(zone_id: str, db: Session = Depends(get_db)):
 @router.get("/exposure/villages")
 def exposure_villages(db: Session = Depends(get_db)):
     """Village + infrastructure exposure registry (STATIC indicative demo data)."""
-    from ..models_db import Village, Infrastructure
+    from ..models_db import Infrastructure, Village
     villages = db.query(Village).all()
     infra = db.query(Infrastructure).all()
     return {
@@ -859,7 +859,7 @@ def hotspot_ranking(
     return {
         "hotspots": ranked,
         "total": len(ranked),
-        "analyzed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "analyzed_at": dt.datetime.now(dt.UTC).isoformat(),
     }
 
 
@@ -878,7 +878,6 @@ def scenario_simulation(req: ScenarioRequest):
     """Simulate risk under a rainfall scenario. Clearly labeled as WHAT-IF."""
     # Run current pipeline
     current = sim.run_pipeline(req.t)
-    current_map = {r["zone_id"]: r for r in current}
 
     # Simulate future rainfall by scaling observations
     # This is a proxy simulation, not a model prediction
@@ -893,7 +892,7 @@ def scenario_simulation(req: ScenarioRequest):
         sim_soil = min(0.95, r["soil_moisture"] + soil_bump)
 
         # Recalculate risk using fusion formula
-        from ..ml.fusion import fuse, classify
+        from ..ml.fusion import fuse
         sim_fusion = fuse(
             r["static_score"],
             r["dynamic_score"],
@@ -934,14 +933,14 @@ def scenario_simulation(req: ScenarioRequest):
             "multiplier": req.multiplier,
             "continued_hours": req.continued_hours,
             "label": (
-                f"Current" if req.multiplier == 1.0 and req.continued_hours == 0
+                "Current" if req.multiplier == 1.0 and req.continued_hours == 0
                 else f"+{round((req.multiplier - 1) * 100)}% rainfall"
                 + (f", +{req.continued_hours}h continued" if req.continued_hours else "")
             ),
         },
         "results": simulated,
         "warning": "WHAT-IF SIMULATION — not a forecast. Proxy scenario only.",
-        "simulated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "simulated_at": dt.datetime.now(dt.UTC).isoformat(),
     }
 
 
@@ -1017,7 +1016,7 @@ def risk_intensification(
 
     return {
         "intensification": intensified,
-        "compared_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "compared_at": dt.datetime.now(dt.UTC).isoformat(),
     }
 
 
@@ -1069,8 +1068,7 @@ def zone_evidence(
 
     # Drilldown completeness (Phase 12): history, vulnerable roads,
     # active alerts, and data freshness alongside the scores.
-    from app.models_db import (LandslideEvent, RoadSegment, Alert,
-                               RainfallObservation, SoilMoistureObservation)
+    from app.models_db import Alert, LandslideEvent, RainfallObservation, RoadSegment, SoilMoistureObservation
     events = (db.query(LandslideEvent)
               .filter(LandslideEvent.zone_id == zone_id)
               .order_by(LandslideEvent.event_date.desc()).all())
@@ -1242,7 +1240,6 @@ def _generate_hex_grid(lat, lng, radius_km=4.0, cell_size_km=0.4):
 
 def _perturb_features(zone, dist_km, rng):
     """Generate spatially-varying terrain features for a cell."""
-    import numpy as np
     base_slope = float(zone.slope)
     base_elev = float(zone.elevation)
     base_rugged = float(zone.ruggedness)
@@ -1273,6 +1270,7 @@ def _observed_cells(zone_id: str, stride: int = 1):
     import math as _math
     import os as _os
     import re as _re
+
     import numpy as _np
     # P2: zone_id is user-controlled — allowlist it so `../` or absolute
     # paths can never escape data/raw.
@@ -1327,6 +1325,7 @@ def cell_risk_grid(
     Runs the trained RF model on each terrain cell independently.
     """
     import numpy as np
+
     from ..ml.rf_model import RFModel
 
     zone = db.query(Zone).filter(Zone.id == zone_id).first()
@@ -1402,18 +1401,15 @@ def cell_risk_grid(
     demo_rng = None
     demo_anchor = None
     if mode == "demo":
-        if use_observed:
-            demo_slopes = [cell["slope_dem"] for cell in grid]
-        else:
-            demo_slopes = [row[0] for row in feat_rows]
+        demo_slopes = [cell["slope_dem"] for cell in grid] if use_observed else [row[0] for row in feat_rows]
         demo_rng = np.random.RandomState(abs(hash(zone_id)) % (2 ** 31))
         demo_anchor = min(0.95, max(0.05, dynamic_score))
 
-    from ..ml.fusion import fuse, classify
+    from ..ml.fusion import classify, fuse
 
     cells = []
-    for ci, (cell, pred) in enumerate(zip(grid, proba_all)):
-        static_score = sum(p * c / 2.0 for p, c in zip(pred, classes))
+    for ci, (cell, pred) in enumerate(zip(grid, proba_all, strict=False)):
+        static_score = sum(p * c / 2.0 for p, c in zip(pred, classes, strict=False))
         static_score = min(1.0, max(0.0, static_score))
 
         # Combine with dynamic for fused risk
@@ -1503,6 +1499,7 @@ def temporal_cell_grid(
     Optimized: runs pipeline once per unique timestep, uses batch RF prediction.
     """
     import numpy as np
+
     from ..ml.rf_model import RFModel
 
     zone = db.query(Zone).filter(Zone.id == zone_id).first()
@@ -1527,9 +1524,9 @@ def temporal_cell_grid(
     # Batch predict static scores once — same for all timesteps
     static_scores = rf.model.predict_proba(base_features)
     classes = list(rf.model.classes_)
-    static_vec = np.array([min(1.0, max(0.0, sum(p * c / 2.0 for p, c in zip(proba, classes)))) for proba in static_scores])
+    static_vec = np.array([min(1.0, max(0.0, sum(p * c / 2.0 for p, c in zip(proba, classes, strict=False)))) for proba in static_scores])
 
-    from ..ml.fusion import fuse, classify
+    from ..ml.fusion import classify, fuse
 
     demo_slopes = None
     if mode == "demo":
@@ -1538,7 +1535,7 @@ def temporal_cell_grid(
         demo_slopes = [(s - lo) / (hi - lo) if hi > lo else 0.5 for s in slopes]
 
     timesteps_data = []
-    for ti, (t_val, t_label) in enumerate(zip(timesteps, t_labels)):
+    for ti, (t_val, t_label) in enumerate(zip(timesteps, t_labels, strict=False)):
         results = sim.run_pipeline(t_val)
         zone_result = next((r for r in results if r["zone_id"] == zone_id), None)
         dynamic_score = zone_result["dynamic_score"] if zone_result else 0.5
@@ -1722,8 +1719,9 @@ def emergency_priorities(
     """
     results = sim.run_pipeline(t)
 
-    from app.models_db import CitizenReport as _CR
     import math as _m
+
+    from app.models_db import CitizenReport as _CR
     open_reports = db.query(_CR).filter(
         _CR.status.in_(["PENDING", "VERIFIED"])).all()
 
@@ -1835,5 +1833,5 @@ def emergency_priorities(
     return {
         "priorities": priorities,
         "total": len(priorities),
-        "analyzed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "analyzed_at": dt.datetime.now(dt.UTC).isoformat(),
     }

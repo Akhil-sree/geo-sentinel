@@ -1,12 +1,15 @@
 """Rate-limit store + spoof-safe client-IP regressions."""
-import os
 
 from fastapi.testclient import TestClient
 
 from app import auth
-from app.auth import (InMemoryRateLimitStore, RateLimitStore,
-                      get_rate_limit_store, resolve_client_ip,
-                      set_rate_limit_store)
+from app.auth import (
+    InMemoryRateLimitStore,
+    RateLimitStore,
+    get_rate_limit_store,
+    resolve_client_ip,
+    set_rate_limit_store,
+)
 from app.main import app
 
 client = TestClient(app)
@@ -27,8 +30,8 @@ def test_rate_limit_raises_429_at_budget():
     old = get_rate_limit_store()
     set_rate_limit_store(store)
     try:
-        from fastapi import HTTPException
         import pytest
+        from fastapi import HTTPException
         for _ in range(2):
             auth.rate_limit("burst-key", limit=2)
         with pytest.raises(HTTPException) as ei:

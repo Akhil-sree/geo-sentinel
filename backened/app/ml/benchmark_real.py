@@ -22,9 +22,13 @@ VAL_ZONES = ["Z7", "Z8"]
 
 def _scores(y_true, proba):
     import numpy as np
-    from sklearn.metrics import (precision_recall_fscore_support, roc_auc_score,
-                                 average_precision_score, brier_score_loss,
-                                 confusion_matrix)
+    from sklearn.metrics import (
+        average_precision_score,
+        brier_score_loss,
+        confusion_matrix,
+        precision_recall_fscore_support,
+        roc_auc_score,
+    )
     y_true = np.asarray(y_true, dtype=int)
     proba = np.asarray(proba, dtype=float)
     pred = (proba >= 0.5).astype(int)
@@ -48,17 +52,20 @@ def _scores(y_true, proba):
 
 
 def main():
-    import torch  # FIRST: native libs must load before sklearn's OpenMP
     import csv
     import json
+
     import numpy as np
+    import torch  # FIRST: native libs must load before sklearn's OpenMP
+    from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
     from sklearn.linear_model import LogisticRegression
-    from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+
     from app.database import SessionLocal
-    from app.models_db import Zone
     from app.ml.dataset import build_event_dataset
-    from app.ml.mamba_model import TORCH
-    from app.ml.mamba_model import get_temporal_model  # noqa: E402 (after TORCH ok)
+    from app.ml.mamba_model import (
+        get_temporal_model,  # noqa: E402 (after TORCH ok)
+    )
+    from app.models_db import Zone
 
     out = {}
     # ---- static models: retrain on Z1–Z6 zone-years, test Z7/Z8 ----
@@ -129,7 +136,7 @@ def main():
             static_s.append(0.5)
         dyn_s.append(float(mp[i]))
         yt.append(int(yh[i]))
-    fused = [0.4 * s + 0.6 * d for s, d in zip(static_s, dyn_s)]
+    fused = [0.4 * s + 0.6 * d for s, d in zip(static_s, dyn_s, strict=False)]
     out["fusion_expert"] = {"inputs": "static RF + mamba (0.4/0.6)",
                             "note": "illustrative n=6 (not validation)",
                             **_scores(yt, fused)}

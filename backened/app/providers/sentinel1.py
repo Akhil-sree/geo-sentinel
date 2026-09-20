@@ -9,7 +9,8 @@ dates, freshness "6d old (sparse)".
 """
 import hashlib
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+
 from app.ingest.base import IngestionAdapter
 from app.providers.common import canonical_zone, store_sar_rows
 from app.providers.imd import ZONES
@@ -24,7 +25,7 @@ class MockSentinel1Adapter(IngestionAdapter):
 
     def fetch(self) -> list[dict]:
         # Deterministic demo values (seeded): repeatable, honestly DEMO.
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         out = []
         for zid in ZONES:
             rng = random.Random(int(hashlib.sha256(
@@ -64,8 +65,8 @@ class MockSentinel1Adapter(IngestionAdapter):
                 "sar_change_score": float(r["sar_change_score"])}
 
     def store(self, db, records: list[dict]) -> None:
-        from app.providers.common import replace_source_rows
         from app.models_db import SARObs
+        from app.providers.common import replace_source_rows
         replace_source_rows(db, SARObs, "Sentinel1_MOCK")
         store_sar_rows(db, records, source="Sentinel1_MOCK")
 

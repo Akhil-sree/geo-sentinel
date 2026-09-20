@@ -50,11 +50,11 @@ def test_geometry_is_real_road_path():
     assert _haversine_m(25.30, 91.58, coords[0][1], coords[0][0]) < 3000
     assert _haversine_m(25.62, 91.90, coords[-1][1], coords[-1][0]) < 3000
     # no consecutive duplicates
-    for a, b in zip(coords, coords[1:]):
+    for a, b in zip(coords, coords[1:], strict=False):
         assert a != b
     # no immediate full reversals (A->B->A)
     pts = [tuple(c) for c in coords]
-    for a, b, c_ in zip(pts, pts[1:], pts[2:]):
+    for a, b, c_ in zip(pts, pts[1:], pts[2:], strict=False):
         assert not (a == c_ and a != b), f"reversal at {b}"
     # distance derived from segments, ETA derived from distance
     seg_sum = sum(s["length_m"] for s in d["segments"])
@@ -117,7 +117,7 @@ def test_route_geometry_alias_matches_geometry():
     geom = d["geometry"]["coordinates"]
     rg = d["route_geometry"]
     assert len(rg) == len(geom) > 2
-    for (lng, lat), (rlat, rlng) in zip(geom, rg):
+    for (lng, lat), (rlat, rlng) in zip(geom, rg, strict=False):
         assert (rlat, rlng) == (lat, lng)
     assert d["roads_used"] == d["segments"]
     assert d["roads_avoided"] == d["blocked_avoided"]

@@ -1,12 +1,12 @@
 """Route optimization endpoints — A* routing for evacuation/response."""
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy.orm import Session
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from typing import Optional
+from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models_db import Zone, RoadSegment
-from app.services.route_optimizer import find_safest_route, find_all_routes_from
+from app.models_db import RoadSegment, Zone
+from app.services.route_optimizer import find_all_routes_from, find_safest_route
 
 router = APIRouter(tags=["routes"])
 

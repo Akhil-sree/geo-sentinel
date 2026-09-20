@@ -1,6 +1,7 @@
 """Pydantic response/request schemas — the contract the frontend types/ folder mirrors."""
-from pydantic import BaseModel, Field
 from typing import Literal
+
+from pydantic import BaseModel, Field
 
 Severity = Literal["LOW", "MODERATE", "HIGH", "VERY_HIGH"]
 

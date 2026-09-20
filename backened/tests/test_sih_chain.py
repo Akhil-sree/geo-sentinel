@@ -21,10 +21,12 @@ def test_pipeline_never_wipes_real_observations(monkeypatch):
     """Worker runs sim.run_pipeline every 15 min: live/sensor rows must
     survive (source-scoped demo deletes only)."""
     import datetime as dt
+
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from app.database import Base
+
     import app.models_db as M
+    from app.database import Base
     from app.services import sim
     e = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(e)
@@ -133,13 +135,14 @@ def test_sensor_duplicate_detection_unit():
     """Same sensor+timestamp twice → second is deduplicated."""
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
+
+    from app.api.sensors import ReadingIn, _ingest_one
     from app.database import Base
-    from app.api.sensors import _ingest_one, ReadingIn
     e = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(e)
     db = sessionmaker(bind=e)()
-    from app.seed import ZONES
     import app.models_db as M
+    from app.seed import ZONES
     for zd in ZONES:
         z = {k: v for k, v in zd.items() if k not in ("label", "lat", "lng")}
         z["latitude"], z["longitude"] = zd["lat"], zd["lng"]

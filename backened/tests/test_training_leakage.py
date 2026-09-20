@@ -35,7 +35,8 @@ def test_no_future_rainfall_in_caches():
         eid = r["sample_id"].split("-", 1)[1]
         p = os.path.join(RAW, f"ner_rain_{eid}.json")
         assert os.path.exists(p), f"missing rain cache {eid}"
-        d = json.load(open(p, encoding="utf-8"))
+        with open(p, encoding="utf-8") as _rain_fh:
+            d = json.load(_rain_fh)
         end = r["event_date"] + "T23:59"
         late = [t for t in d["hourly"]["time"] if t > end]
         assert not late, f"future rainfall in {eid}: {late[:3]}"
@@ -92,7 +93,8 @@ def test_no_silent_zero_fill():
 
 def test_sar_metadata_only():
     for p in glob.glob(os.path.join(RAW, "ner_sar_*.json")):
-        d = json.load(open(p, encoding="utf-8"))
+        with open(p, encoding="utf-8") as _sar_fh:
+            d = json.load(_sar_fh)
         blob = json.dumps(d).lower()
         for banned in ("backscatter", "sigma0", "gamma0", "coherence_value", "vv_db"):
             assert banned not in blob, f"imagery-derived key in {p}"

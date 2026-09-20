@@ -13,10 +13,10 @@ no hardcoded meteorology).
 """
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from app.ingest.base import IngestionAdapter
-from app.providers.common import (CANONICAL_ZONES, canonical_zone, parse_ts,
-                                  store_rainfall_rows, store_soil_rows)
+from app.providers.common import canonical_zone, parse_ts, store_rainfall_rows, store_soil_rows
 
 API = "https://api.open-meteo.com/v1/forecast"
 TIMEOUT = float(os.getenv("OPENMETEO_TIMEOUT_S", "15"))
@@ -54,7 +54,7 @@ def _cached_fetch(key: str, params: dict) -> tuple[list[str], list, str | None]:
     Raises on transport/HTTP errors (→ runner marks source STALE, never mocked).
     Handles HTTP 429 explicitly so rate limiting is visible, not silent."""
     import httpx
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
     hit = _CACHE.get(key)
     if hit and time.time() - hit[0] < CACHE_TTL_S:
         return hit[1][0], hit[1][1], now_iso
@@ -62,14 +62,14 @@ def _cached_fetch(key: str, params: dict) -> tuple[list[str], list, str | None]:
     try:
         r = httpx.get(API, params=params, timeout=TIMEOUT)
     except Exception as e:
-        raise RuntimeError(f"Open-Meteo unreachable: {type(e).__name__}: {e}")
+        raise RuntimeError(f"Open-Meteo unreachable: {type(e).__name__}: {e}") from e
     if r.status_code == 429:
         raise RuntimeError("Open-Meteo rate-limited (HTTP 429) — backing off, source STALE")
     r.raise_for_status()
     try:
         hourly = r.json().get("hourly", {})
-    except Exception:
-        raise RuntimeError("Open-Meteo returned malformed (non-JSON) response")
+    except Exception as e:
+        raise RuntimeError("Open-Meteo returned malformed (non-JSON) response") from e
     times, vals = hourly.get("time", []), None
     for k in ("precipitation", "soil_moisture_3_9cm"):
         if k in hourly:
@@ -102,7 +102,7 @@ class OpenMeteoRainAdapter(IngestionAdapter):
                 f"rain|{zid}",
                 {"latitude": lat, "longitude": lon, "hourly": "precipitation",
                  "past_days": 7, "forecast_days": 1, "timezone": "UTC"})
-            for t, mm in zip(times[-168:], vals[-168:]):
+            for t, mm in zip(times[-168:], vals[-168:], strict=False):
                 if mm is None:  # missing-data: skip, don't invent zeros
                     continue
                 out.append({"zone_id": zid, "timestamp": t,
@@ -160,7 +160,7 @@ class OpenMeteoSoilAdapter(IngestionAdapter):
                 f"soil|{zid}",
                 {"latitude": lat, "longitude": lon, "hourly": "soil_moisture_3_9cm",
                  "past_days": 7, "forecast_days": 1, "timezone": "UTC"})
-            for t, sm in zip(times[-168:], vals[-168:]):
+            for t, sm in zip(times[-168:], vals[-168:], strict=False):
                 if sm is None:
                     continue
                 out.append({"zone_id": zid, "timestamp": t,

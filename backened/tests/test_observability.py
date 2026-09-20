@@ -6,9 +6,15 @@ import logging
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.observability import (JsonFormatter, record_ml_inference,
-                               record_provider_failure, record_request,
-                               record_route, reset_metrics, snapshot)
+from app.observability import (
+    JsonFormatter,
+    record_ml_inference,
+    record_provider_failure,
+    record_request,
+    record_route,
+    reset_metrics,
+    snapshot,
+)
 
 client = TestClient(app)
 

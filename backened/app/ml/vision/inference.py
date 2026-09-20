@@ -1,14 +1,12 @@
 """Inference pipeline — end-to-end SegFormer inference on a single image."""
-import logging
 import datetime as dt
-import numpy as np
-from io import BytesIO
+import logging
 
-from .config import VISION_CONFIDENCE_THRESHOLD, OBSERVATION_SEVERITY_THRESHOLDS
-from .model import get_model, model_info
-from .preprocessing import validate_image, preprocess, postprocess_mask
-from .postprocessing import process_mask
+from .config import OBSERVATION_SEVERITY_THRESHOLDS, VISION_CONFIDENCE_THRESHOLD
 from .geospatial import mask_to_geojson
+from .model import get_model, model_info
+from .postprocessing import process_mask
+from .preprocessing import postprocess_mask, preprocess, validate_image
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ def analyze_image(
 
     Returns dict matching VisionObservation schema.
     """
-    ts = dt.datetime.now(dt.timezone.utc).isoformat()
+    ts = dt.datetime.now(dt.UTC).isoformat()
     info = model_info()
 
     # Validate
@@ -64,7 +62,6 @@ def analyze_image(
     # Class 15 in ADE20K is "earth" / ground — for landslide, we use class probabilities
     # Since this is a pretrained model (not landslide-specific), we look for
     # classes that could correspond to bare earth/rock/debris
-    landslide_classes = [0, 1, 2, 3, 4, 5]  # background, buildings, etc — we use a composite
     # For demo: use the max probability across non-sky/non-vegetation classes as "suspected landslide"
     # In production, this would be a fine-tuned model with a single landslide class
 

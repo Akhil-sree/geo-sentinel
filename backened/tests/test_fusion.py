@@ -1,9 +1,11 @@
 """Unit tests for the fusion engine and escalation rule — the highest-risk
 pure logic in the system."""
-import os, sys
+import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from app.ml.fusion import fuse, classify, escalation_rule
-from app.config import THRESHOLDS
+from app.ml.fusion import classify, escalation_rule, fuse
+
 
 def test_class_boundaries():
     assert classify(0.10) == "LOW"

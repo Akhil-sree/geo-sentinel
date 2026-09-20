@@ -1,16 +1,16 @@
 """Vision API endpoints — image upload, SegFormer analysis, observation records."""
+import datetime as dt
 import json
 import os
-import datetime as dt
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app.database import get_db
 from app.config import MEDIA_DIR
-from app.models_db import VisionObservation, CitizenReport, Zone
+from app.database import get_db
 from app.ml.vision.inference import analyze_image
 from app.ml.vision.model import model_info
-from app.ml.vision.schemas import VisionObservation as VisionObsSchema
+from app.models_db import VisionObservation
 from app.services.vision_observation import corroborate
 
 router = APIRouter(tags=["vision"])
@@ -26,8 +26,10 @@ async def analyze_report_image(
     db: Session = Depends(get_db),
 ):
     """Upload an image for SegFormer analysis. Produces segmentation mask + observation record."""
+    from app.api.reports import ALLOWED as _ALLOWED
+    from app.api.reports import MAX_SIZE as _MAX
+    from app.api.reports import _check_magic as _magic
     from app.auth import rate_limit as _rl
-    from app.api.reports import ALLOWED as _ALLOWED, MAX_SIZE as _MAX, _check_magic as _magic
     _rl("vision", limit=30)
     content_type = file.content_type or ""
     if content_type not in _ALLOWED or not content_type.startswith("image/"):

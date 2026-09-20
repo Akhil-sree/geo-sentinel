@@ -1,12 +1,14 @@
 """Remediation regression tests: no untrained net in prod path, no live
 overclaim, satellite quarantine, upload validation, cooldown."""
 import os
+from datetime import UTC
 
 
 def test_temporal_defaults_to_fallback():
     os.environ.pop("MAMBA_LIVE", None)
     os.environ.pop("MAMBA_WEIGHTS", None)
     import importlib
+
     import app.ml.mamba_model as m
     importlib.reload(m)
     model = m.get_temporal_model()
@@ -17,14 +19,14 @@ def test_temporal_defaults_to_fallback():
 
 def test_satellite_quarantined_from_risk(monkeypatch):
     monkeypatch.setenv("SATELLITE_LIVE", "false")
-    import app.services.sim as sim
     assert os.getenv("SATELLITE_LIVE") == "false"  # quarantine flag honored
 
 
 def test_openmeteo_adapters_validate():
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     from app.providers.openmeteo import OpenMeteoRainAdapter, OpenMeteoSoilAdapter
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     assert OpenMeteoRainAdapter().validate(
         [{"zone_id": "Z1", "timestamp": now,
           "rainfall_mm_per_hr": 12.5}])[0]["rainfall_mm_per_hr"] == 12.5
@@ -65,6 +67,7 @@ def test_xai_labels_method():
 
 def test_provider_states_shape():
     from unittest.mock import MagicMock
+
     from app.ingest.runner import provider_states
     db = MagicMock()
     db.query.return_value.order_by.return_value.limit.return_value.all.return_value = []

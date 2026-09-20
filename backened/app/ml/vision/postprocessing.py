@@ -1,5 +1,6 @@
 """Post-processing: thresholding, morphological cleanup, connected components, contours."""
 import numpy as np
+
 from .config import VISION_CONFIDENCE_THRESHOLD, VISION_MIN_REGION_AREA
 
 

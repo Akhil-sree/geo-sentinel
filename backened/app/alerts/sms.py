@@ -20,10 +20,10 @@ Alerts are severity-tiered and do not issue evacuation orders.
 import json
 import logging
 import os
+from datetime import UTC
 
 from ..database import SessionLocal
-from ..models_db import Alert, Recipient, AuditLog
-
+from ..models_db import Alert, AuditLog, Recipient
 
 log = logging.getLogger("alerts")
 
@@ -66,7 +66,6 @@ def _template(
 
     with open(
         template_path,
-        "r",
         encoding="utf-8",
     ) as f:
 
@@ -309,14 +308,14 @@ def dispatch_alert(
     # Idempotency key: zone + severity + UTC hour bucket. A duplicate
     # dispatch inside the bucket returns deduplicated instead of re-sending
     # (double-submit / double-worker safe; escalation uses a new severity).
-    from datetime import datetime, timezone as _tz
-    bucket = datetime.now(_tz.utc).strftime("%Y-%m-%dT%H")
+    from datetime import datetime
+    bucket = datetime.now(UTC).strftime("%Y-%m-%dT%H")
     idem_key = f"{zone_id}:{severity}:{bucket}"
     prior = (db.query(Alert)
              .filter(Alert.zone_id == zone_id, Alert.severity == severity)
              .order_by(Alert.created_at.desc()).first())
     if prior and prior.created_at:
-        ts = prior.created_at.replace(tzinfo=_tz.utc)
+        ts = prior.created_at.replace(tzinfo=UTC)
         if ts.strftime("%Y-%m-%dT%H") == bucket:
             db.close()
             return {"sent": 0, "deduplicated": True,

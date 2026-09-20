@@ -6,9 +6,10 @@ transform → store → log → retry. Retries use exponential backoff;
 after MAX_RETRIES the source is marked STALE (visible in /admin/data),
 never silently dropped or filled with synthetic values.
 """
-from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+import logging as _log
 import time
+from abc import ABC, abstractmethod
+from datetime import UTC, datetime
 
 MAX_RETRIES = 3
 BACKOFF_S = [2, 8, 30]
@@ -52,10 +53,11 @@ class IngestionAdapter(ABC):
         """Subclasses override: provider field names → canonical schema."""
         return r
 
+    @abstractmethod
     def store(self, db, records: list[dict]) -> None: ...
 
     def log(self, db, status: str, detail: str) -> None:
         from app.models_db import IngestionLog
         db.add(IngestionLog(source=self.source_name, status=status, detail=detail,
-                            ran_at=datetime.now(timezone.utc)))
+                            ran_at=datetime.now(UTC)))
         db.commit()

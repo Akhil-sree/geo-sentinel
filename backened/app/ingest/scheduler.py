@@ -7,13 +7,13 @@ a daemon thread re-ingests every INGEST_INTERVAL_MIN minutes.
 PRODUCTION: replace thread with Celery beat + dedicated workers so a slow
 provider never blocks the API process. The runner contract stays identical.
 """
+import logging
 import os
 import threading
 import time
-import logging
 
-from app.ingest.runner import run_ingestion
 from app.database import SessionLocal
+from app.ingest.runner import run_ingestion
 
 log = logging.getLogger("ingest.scheduler")
 INTERVAL_MIN = float(os.getenv("INGEST_INTERVAL_MIN", "30"))

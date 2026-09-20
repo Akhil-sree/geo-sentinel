@@ -5,13 +5,15 @@ Contract honored per adapter: retries with backoff inside adapter.run();
 a failed source lands in IngestionLog as STALE — it never blocks the
 other sources, and its staleness is surfaced via /admin/data.
 """
-from datetime import datetime, timedelta, timezone
+import logging as _log
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy.orm import Session
 
-from app.models_db import IngestionLog, RainfallObs, SoilMoistureObs, SARObs
+from app.models_db import IngestionLog, RainfallObs, SARObs, SoilMoistureObs
 from app.providers.imd import MockIMDAdapter
-from app.providers.smap import MockSMAPAdapter
 from app.providers.sentinel1 import MockSentinel1Adapter
+from app.providers.smap import MockSMAPAdapter
 
 
 def _adapters():
@@ -41,7 +43,7 @@ def run_ingestion(db: Session) -> dict:
     import time as _time
     import uuid as _uuid
     job_id = f"ingest-{_uuid.uuid4().hex[:8]}"
-    started = datetime.now(timezone.utc)
+    started = datetime.now(UTC)
     t0 = _time.time()
     results = []
     for adapter in _adapters():
@@ -58,7 +60,7 @@ def run_ingestion(db: Session) -> dict:
     _persist_features(db)
     from app.providers.common import trim_observations
     trimmed = trim_observations(db)
-    completed = datetime.now(timezone.utc)
+    completed = datetime.now(UTC)
     summary = {"job_id": job_id,
                "started_at": started.isoformat(),
                "completed_at": completed.isoformat(),
@@ -84,7 +86,7 @@ def _persist_features(db: Session) -> None:
       rainfall_24h, rainfall_72h, rainfall_7d, rainfall_slope (24h trend),
       soil_moisture (latest, with latency honesty), sar_change_score.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     rain_rows = db.query(RainfallObs).filter(
         RainfallObs.timestamp >= now - timedelta(days=8)).all()
 
@@ -164,8 +166,8 @@ def provider_states(db: Session) -> list[dict]:
     def _tier(src: str, last) -> tuple[str, float | None]:
         if last is None or last.status != "OK" or not last.ran_at:
             return "UNAVAILABLE", None
-        age = (datetime.now(timezone.utc) - last.ran_at.replace(
-            tzinfo=timezone.utc)).total_seconds() / 60
+        age = (datetime.now(UTC) - last.ran_at.replace(
+            tzinfo=UTC)).total_seconds() / 60
         fresh_min, stale_min = TIERS.get(src, (360, 1440))
         if age <= fresh_min:
             return "FRESH", age
@@ -174,7 +176,7 @@ def provider_states(db: Session) -> list[dict]:
         return "EXPIRED", age
 
     def state_for(src: str, live: bool, demo_label: str) -> dict:
-        last = next((l for l in recent if l.source == src), None)
+        last = next((row for row in recent if row.source == src), None)
         tier, age = _tier(src, last)
         if tier == "FRESH":
             fresh = "LIVE" if live else "SIMULATED"

@@ -8,7 +8,7 @@ and state SDMA authorization — enforced by alert gating upstream.
 """
 import os
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 TEMPLATES = {
     "en": {
@@ -29,14 +29,15 @@ TEMPLATES = {
     },
 }
 
-_mask = lambda num: re.sub(r"\d(?=.*\d{2})", "*", num or "demo-number")
+def _mask(num):
+    return re.sub(r"\d(?=.*\d{2})", "*", num or "demo-number")
 
 
 class MockSMSProvider:
     name = "mock"
 
     def send(self, to: str, message: str, recipient_name: str = "") -> dict:
-        ts = datetime.now(timezone.utc).isoformat()
+        ts = datetime.now(UTC).isoformat()
         print(f"[MockSMS] {_mask(to)} ({recipient_name}): {message}")
         return {"provider": self.name, "to": _mask(to), "status": "SENT (mock)",
                 "at": ts, "detail": "demo console — no SMS transmitted"}
@@ -55,7 +56,7 @@ class TwilioProvider:
         client = Client(os.environ["TWILIO_ACCOUNT_SID"], os.environ["TWILIO_AUTH_TOKEN"])
         msg = client.messages.create(body=message, from_=self.from_number, to=to)
         return {"provider": self.name, "to": to, "status": str(msg.status),
-                "at": datetime.now(timezone.utc).isoformat(), "detail": msg.sid}
+                "at": datetime.now(UTC).isoformat(), "detail": msg.sid}
 
 
 def get_sms_provider():

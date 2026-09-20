@@ -1,6 +1,7 @@
 """SegFormer model singleton — loads once, reuses across requests."""
 import logging
-from .config import VISION_MODEL, VISION_CHECKPOINT, VISION_MODE
+
+from .config import VISION_CHECKPOINT, VISION_MODE, VISION_MODEL
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +34,6 @@ def get_model():
             _processor = ProcessorClass.from_pretrained(model_name)
             _model = SegformerForSemanticSegmentation.from_pretrained(model_name)
 
-        import torch
         _model.eval()
         log.info("SegFormer loaded successfully on %s", "CPU")
 

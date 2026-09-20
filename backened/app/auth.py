@@ -7,8 +7,11 @@
   `auth_mode: open-demo` so the UI can label it honestly.
 - Rate limit: 60 req/min/IP on guarded paths (in-memory, single worker).
 """
+import logging as _log
 import os
 import time
+from contextlib import suppress
+
 from fastapi import Header, HTTPException
 
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
@@ -197,11 +200,9 @@ class RedisRateLimitStore(RateLimitStore):
     def reset(self) -> None:
         if self._client is None:
             return
-        try:
-            # Note: This is a best-effort cleanup; pattern-based deletion
-            # would require SCAN which is expensive. In practice, keys expire.
-            pass
-        except Exception:
+        # Note: best-effort cleanup; pattern-based deletion would require
+        # SCAN which is expensive. In practice, keys expire.
+        with suppress(Exception):
             pass
 
 

@@ -22,8 +22,9 @@ VERSION = "seq_storm_v1"
 
 
 def _hourly_series(zone_id: str, t_end: int, hours: int) -> pd.DataFrame:
-    from app.services.sim import storm, BASE
     import datetime as dt
+
+    from app.services.sim import BASE, storm
     rows = []
     for h in range(t_end - hours + 1, t_end + 1):
         rows.append({"timestamp": BASE + dt.timedelta(hours=h),
@@ -42,7 +43,7 @@ def build_sequences(zone_ids: list[str], t_values: list[int]):
             soil_df = pd.DataFrame(
                 [{"timestamp": r["timestamp"],
                   "soil_moisture": min(0.92, 0.35 + storm(h) * 0.001)}
-                 for h, r in zip(range(t - 47, t + 1), rain_df.to_dict("records"))])
+                  for h, r in zip(range(t - 47, t + 1), rain_df.to_dict("records"), strict=False)])
             seq = build_model_sequence(rain_df, soil_df, 0.15, seq_len=SEQ_LEN)
             if len(seq) != SEQ_LEN:
                 continue

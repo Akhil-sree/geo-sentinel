@@ -1,7 +1,7 @@
 """Road GIS endpoint tests — real OSM geometry served by the API."""
+import json
 import os
 import sys
-import json
 from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -14,7 +14,7 @@ def test_roads_geojson_exists():
 
 
 def test_roads_geojson_is_valid_featurecollection():
-    with open(ROADS_GEOJSON, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON, encoding="utf-8") as f:
         data = json.load(f)
     assert data["type"] == "FeatureCollection"
     assert isinstance(data["features"], list)
@@ -22,7 +22,7 @@ def test_roads_geojson_is_valid_featurecollection():
 
 
 def test_road_geometries_are_linestrings():
-    with open(ROADS_GEOJSON, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON, encoding="utf-8") as f:
         data = json.load(f)
     for feat in data["features"][:100]:  # sample first 100
         geom = feat["geometry"]
@@ -47,7 +47,7 @@ def test_road_geometries_are_linestrings():
 
 
 def test_road_features_have_osm_properties():
-    with open(ROADS_GEOJSON, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON, encoding="utf-8") as f:
         data = json.load(f)
     for feat in data["features"][:50]:
         props = feat["properties"]
@@ -59,7 +59,7 @@ def test_road_features_have_osm_properties():
 
 
 def test_road_metadata_present():
-    with open(ROADS_GEOJSON, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON, encoding="utf-8") as f:
         data = json.load(f)
     meta = data.get("metadata", {})
     assert meta.get("crs") == "EPSG:4326", "CRS must be EPSG:4326"
@@ -71,7 +71,7 @@ def test_road_metadata_present():
 
 def test_no_point_only_road_features():
     """Primary road layer must not be point-only markers."""
-    with open(ROADS_GEOJSON, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON, encoding="utf-8") as f:
         data = json.load(f)
     for feat in data["features"]:
         geom_type = feat["geometry"]["type"]
@@ -81,7 +81,7 @@ def test_no_point_only_road_features():
 
 def test_no_fake_straight_line_connections():
     """Each road feature should come from OSM PBF, not fabricated coords."""
-    with open(ROADS_GEOJSON, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON, encoding="utf-8") as f:
         data = json.load(f)
     for feat in data["features"][:200]:
         props = feat["properties"]
@@ -99,7 +99,7 @@ MEGHALAYA_LON_MIN, MEGHALAYA_LON_MAX = 89.70, 92.90
 
 def test_roads_within_meghalaya_aoi():
     """Sample of road coordinates should fall within the Meghalaya bounding box."""
-    with open(ROADS_GEOJSON, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON, encoding="utf-8") as f:
         data = json.load(f)
     sample = data["features"][:500]
     outside = 0
@@ -128,7 +128,7 @@ def test_roads_within_meghalaya_aoi():
 
 def test_representative_road_coordinates_geographically_plausible():
     """Check representative roads have lon/lon in expected Meghalaya range."""
-    with open(ROADS_GEOJSON, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON, encoding="utf-8") as f:
         data = json.load(f)
     # Find a major road (NH)
     major = [f for f in data["features"]
@@ -145,7 +145,7 @@ def test_representative_road_coordinates_geographically_plausible():
 
 def test_road_categories_are_balanced():
     """The road network should have features across categories."""
-    with open(ROADS_GEOJSON, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON, encoding="utf-8") as f:
         data = json.load(f)
     cats = {}
     for feat in data["features"]:
@@ -158,7 +158,7 @@ def test_road_categories_are_balanced():
 
 def test_road_feature_geometry_line_segment_count():
     """Major roads should have reasonable segment counts (not single-point)."""
-    with open(ROADS_GEOJSON, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON, encoding="utf-8") as f:
         data = json.load(f)
     major = [f for f in data["features"]
              if f["properties"].get("category") == "major"][:20]
@@ -177,7 +177,7 @@ def test_no_risk_point_to_risk_point_lines():
     Short roads within a single zone area are fine — those are real OSM ways.
     What we prohibit: a line that starts at one zone center and ends at another,
     which would be a synthetic connection rather than real road geometry."""
-    with open(ROADS_GEOJSON, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON, encoding="utf-8") as f:
         data = json.load(f)
     # Known zone centers (approximate)
     zone_centers = [

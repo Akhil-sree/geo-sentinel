@@ -16,7 +16,6 @@ All demo recipients and synthetic data are clearly labeled.
 import datetime as dt
 import os
 
-
 # Terrain provenance (Phase 1D/5): STATIC manual profiles for the 8 demo
 # zones — NOT a DEM pipeline. A DEM-backed dataset (SRTM 30m / Cartosat)
 # replaces these values without schema changes; aspect/curvature/ruggedness
@@ -264,21 +263,20 @@ def seed(db):
     Seed the database and train the RF model if necessary.
     """
 
-    from .models_db import (
-        Zone,
-        LandslideEvent,
-        Recipient,
-        AuditLog,
-        RoadSegment,
-        EmergencyTask,
-        Village,
-        Infrastructure,
-    )
-
     from .ml.rf_model import (
-        train,
         MODEL_DIR,
         VERSION,
+        train,
+    )
+    from .models_db import (
+        AuditLog,
+        EmergencyTask,
+        Infrastructure,
+        LandslideEvent,
+        Recipient,
+        RoadSegment,
+        Village,
+        Zone,
     )
 
     # ---------------------------------------------------------

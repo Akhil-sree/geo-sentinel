@@ -7,11 +7,10 @@ unreachable destination, one/multi-segment valid routes, malformed input.
 """
 import math
 
-import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
 import app.services.road_graph as rg
+from app.main import app
 
 client = TestClient(app)
 
@@ -89,7 +88,7 @@ def test_valid_route_geometry_integrity():
         lng, lat = float(pt[0]), float(pt[1])
         assert math.isfinite(lng) and math.isfinite(lat)
         assert -90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0
-    for a, b in zip(geom, geom[1:]):
+    for a, b in zip(geom, geom[1:], strict=False):
         assert a != b  # no duplicate consecutive points
 
 

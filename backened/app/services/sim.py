@@ -11,25 +11,23 @@ react end-to-end.
 
 import datetime as dt
 import hashlib
+import logging as _log
 import math
 import os
 
 import pandas as pd
 
 from ..database import SessionLocal
-from ..models_db import Zone, RiskScore
-
 from ..ml.features import (
+    build_model_sequence,
     compute_rainfall_features,
     compute_soil_features,
-    build_model_sequence,
 )
-
-from ..ml.rf_model import RFModel
-from ..ml.mamba_model import get_temporal_model
 from ..ml.fusion import fuse
+from ..ml.mamba_model import get_temporal_model
+from ..ml.rf_model import RFModel
 from ..ml.xai import explain
-
+from ..models_db import RiskScore, Zone
 
 BASE = dt.datetime(2026, 7, 14)
 
@@ -127,10 +125,7 @@ def run_pipeline(t_hours: int):
 
             import time as _t
             _infer0 = _t.perf_counter()
-            if rf.available():
-                rf_res = rf.predict(z)
-            else:
-                rf_res = _rf_fallback(z)
+            rf_res = rf.predict(z) if rf.available() else _rf_fallback(z)
 
             # -------------------------------------------------
             # 4. Rainfall features
@@ -408,7 +403,7 @@ def run_pipeline(t_hours: int):
                                            "not a probability"),
                     "inference_ms": inference_ms,
                     "generated_at": dt.datetime.now(
-                        dt.timezone.utc).isoformat(),
+                        dt.UTC).isoformat(),
                 },
 
                 "sim_time": (

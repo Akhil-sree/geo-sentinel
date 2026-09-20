@@ -125,6 +125,7 @@ def test_meta_blocks_traversal():
 
 def test_dataset_version_traversal_returns_404():
     from fastapi import FastAPI as _F
+
     from app.api import datasets as ds
     app = _F()
     app.include_router(ds.router, prefix="/api")
@@ -143,6 +144,7 @@ def test_observed_cells_blocks_traversal():
 
 def test_report_accuracy_non_numeric_rejected():
     from pydantic import ValidationError
+
     from app.schemas import ReportIn
     with pytest.raises(ValidationError):
         ReportIn(latitude=25.3, longitude=91.7, accuracy="abc")
@@ -165,8 +167,9 @@ def test_worker_helpers_defined_before_main_loop():
     AFTER the blocking `if __name__ == '__main__'` loop, so every worker
     cycle failed with NameError. Helpers must precede the main guard."""
     import ast
-    src = open(os.path.join(os.path.dirname(__file__), "..", "worker.py"),
-               encoding="utf-8").read()
+    with open(os.path.join(os.path.dirname(__file__), "..", "worker.py"),
+              encoding="utf-8") as _w_fh:
+        src = _w_fh.read()
     tree = ast.parse(src)
     main_line = next(n.lineno for n in ast.walk(tree)
                      if isinstance(n, ast.If)
@@ -186,6 +189,7 @@ def test_worker_restart_self_takes_over_but_peer_blocked(tmp_path, monkeypatch):
     foreign heartbeat still blocks; a stale one is taken over."""
     import json
     import time
+
     import worker as w
     monkeypatch.setattr(w, "LOCK_PATH", str(tmp_path / ".worker.lock"))
     monkeypatch.setattr(w, "INTERVAL", 900.0)
@@ -224,6 +228,7 @@ def test_known_coordinate_regression():
 
 def test_torch_load_uses_weights_only():
     import inspect
+
     import app.ml.gs_inference as gsi
     src = inspect.getsource(gsi.mamba_ensemble)
     assert "weights_only=True" in src
@@ -235,7 +240,8 @@ def test_torch_load_uses_weights_only():
         for f in files:
             if f.endswith(".py"):
                 p = os.path.join(root, f)
-                s = open(p, encoding="utf-8").read()
+                with open(p, encoding="utf-8") as _s_fh:
+                    s = _s_fh.read()
                 if re.search(r"torch\.load\(", s) and "weights_only=True" not in s:
                     bad.append(p)
     assert bad == [], f"unsafe torch.load in: {bad}"

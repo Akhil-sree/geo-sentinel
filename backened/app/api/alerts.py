@@ -6,17 +6,18 @@ Provides:
     - Alert delivery history
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Header
-from sqlalchemy.orm import Session
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from sqlalchemy.orm import Session
+
+import app.config as cfg
+
+from ..alerts.sms import dispatch_alert
+from ..auth import _client_ip, guard, rate_limit, require_role
 from ..database import get_db
 from ..models_db import Alert, Zone
 from ..schemas import SendAlertIn
-from ..alerts.sms import dispatch_alert
-from ..auth import guard, rate_limit, require_role, _client_ip
-import app.config as cfg
-
 
 router = APIRouter()
 
@@ -28,7 +29,7 @@ def _cooldown_ok(db: Session, zone_id: str, severity: str) -> None:
     if not last or not last.created_at:
         return
     from datetime import timedelta
-    age = datetime.now(timezone.utc) - last.created_at.replace(tzinfo=timezone.utc)
+    age = datetime.now(UTC) - last.created_at.replace(tzinfo=UTC)
     escalated = rank.get(severity, 0) > rank.get(last.severity, 0)
     if age < timedelta(minutes=cfg.ALERT_COOLDOWN_MIN) and not escalated:
         raise HTTPException(status_code=429, detail=(
@@ -199,6 +200,7 @@ def alert_languages():
     """
     import json as _json
     import os as _os
+
     from app.alerts import sms as _sms
     with open(_os.path.join(_sms.TPL_DIR, "lang_status.json"), encoding="utf-8") as f:
         statuses = _json.load(f)

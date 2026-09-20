@@ -18,9 +18,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models_db import (DatasetVersion, NerInventory, TrainingSample,
-                           RainfallObservation, SoilMoistureObservation,
-                           TerrainDEM)
+from app.models_db import (
+    DatasetVersion,
+    NerInventory,
+    RainfallObservation,
+    SoilMoistureObservation,
+    TerrainDEM,
+    TrainingSample,
+)
 
 router = APIRouter()
 META = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..",

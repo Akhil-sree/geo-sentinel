@@ -25,10 +25,11 @@ def permutation_bundle():
     try:
         import joblib
         from sklearn.inspection import permutation_importance
+
         from app.database import SessionLocal
-        from app.models_db import Zone
-        from app.ml.dataset import build_event_dataset, FEATURES
+        from app.ml.dataset import FEATURES, build_event_dataset
         from app.ml.rf_model import MODEL_DIR
+        from app.models_db import Zone
         apath = os.path.join(MODEL_DIR, "event_rf_event", "model.joblib")
         if not os.path.exists(apath):
             return None
@@ -41,7 +42,7 @@ def permutation_bundle():
         r = permutation_importance(clf, X, y, n_repeats=10,
                                    random_state=42, scoring="f1", n_jobs=-1)
         bundle = {"importances": {f: round(float(v), 4)
-                                  for f, v in zip(FEATURES, r.importances_mean)},
+                                  for f, v in zip(FEATURES, r.importances_mean, strict=False)},
                   "f1_baseline": round(float(
                       (clf.predict(X) == y).mean()), 4),
                   "source": ("permutation on events_v2 train (in-sample, "
@@ -69,7 +70,6 @@ def explain(zone, static_res, dynamic_res, rain_feats, soil_feats, escalated, re
         "soil_moisture": _impact(soil_feats["soil_moisture_current"], 0.3, 0.85),
     }
     # Map RF feature names → display factors
-    wmap = {"slope": imp.get("slope", 0), "road_proximity": imp.get("road_proximity", 0)}
     perm = (perm_bundle or {}).get("importances", {}) if perm_bundle else {}
     drivers = [
         {"factor": "Structural susceptibility (RF)", "impact": _impact(static_res["static_score"], 0, 1), "direction": "↑" if static_res["static_score"] >= 0.5 else "↓"},
@@ -93,7 +93,6 @@ def explain(zone, static_res, dynamic_res, rain_feats, soil_feats, escalated, re
     else:
         method = "IMPORTANCE_WEIGHTED" if imp else "HEURISTIC DRIVER ANALYSIS"
     drivers = sorted(drivers, key=lambda d: -d["impact"])[:5]
-    sev = escalated
     r = reasons
     top = drivers[0]["factor"].lower() if drivers else "conditions"
     second = drivers[1]["factor"].lower() if len(drivers) > 1 else "other factors"

@@ -1,19 +1,19 @@
 """Pydantic schemas for the vision module."""
+
 from pydantic import BaseModel
-from typing import Optional
 
 
 class VisionAnalyzeRequest(BaseModel):
-    report_id: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    zone_id: Optional[str] = None
+    report_id: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    zone_id: str | None = None
 
 
 class VisionObservation(BaseModel):
     model_config = {"protected_namespaces": ()}
 
-    report_id: Optional[str] = None
+    report_id: str | None = None
     model_name: str = "segformer-b0"
     model_mode: str = "demo"
     landslide_detected: bool
@@ -22,25 +22,25 @@ class VisionObservation(BaseModel):
     observation_severity: str
     bbox: list[int] = []
     num_regions: int = 0
-    geometry: Optional[dict] = None
-    image_width: Optional[int] = None
-    image_height: Optional[int] = None
+    geometry: dict | None = None
+    image_width: int | None = None
+    image_height: int | None = None
     timestamp: str = ""
-    warning: Optional[str] = None
+    warning: str | None = None
 
 
 class VisionReport(BaseModel):
     model_config = {"protected_namespaces": ()}
 
     id: str
-    report_id: Optional[str] = None
+    report_id: str | None = None
     model_name: str
     model_mode: str
     confidence: float
     pixel_ratio: float
     severity: str
-    geometry: Optional[dict] = None
-    image_path: Optional[str] = None
+    geometry: dict | None = None
+    image_path: str | None = None
     landslide_detected: bool
     created_at: str
 

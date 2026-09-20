@@ -12,7 +12,7 @@ def expected_calibration_error(y_true, y_proba, n_bins: int = 5) -> float:
     y_proba = np.asarray(y_proba, dtype=float)
     edges = np.linspace(0.0, 1.0, n_bins + 1)
     ece = 0.0
-    for lo, hi in zip(edges[:-1], edges[1:]):
+    for lo, hi in zip(edges[:-1], edges[1:], strict=False):
         m = (y_proba > lo) & (y_proba <= hi if hi < 1.0 else y_proba <= hi + 1e-9)
         if m.sum() == 0:
             continue
@@ -26,7 +26,7 @@ def reliability_bins(y_true, y_proba, n_bins: int = 5) -> list[dict]:
     y_proba = np.asarray(y_proba, dtype=float)
     edges = np.linspace(0.0, 1.0, n_bins + 1)
     out = []
-    for lo, hi in zip(edges[:-1], edges[1:]):
+    for lo, hi in zip(edges[:-1], edges[1:], strict=False):
         m = (y_proba > lo) & (y_proba <= hi + 1e-9)
         out.append({"bin": [round(float(lo), 2), round(float(hi), 2)],
                     "n": int(m.sum()),

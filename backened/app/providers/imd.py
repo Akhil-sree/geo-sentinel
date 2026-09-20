@@ -6,9 +6,10 @@ PRODUCTION: RealIMDAdapter activates only when IMD_API_BASE env var is set.
 Every response surfaced by the API carries state="DEMO DATA" until the
 real adapter is active.
 """
-import os
 import math
-from datetime import datetime, timedelta, timezone
+import os
+from datetime import UTC, datetime, timedelta
+
 from app.ingest.base import IngestionAdapter
 from app.providers.common import CANONICAL_ZONES, canonical_zone, store_rainfall_rows
 
@@ -24,10 +25,14 @@ def _monsoon_mm(zone_id: str, sim_hour: int, phase: int) -> float:
     amplitude = {"Z1": 60.0, "Z2": 55.0,
                  "Z3": 40.0, "Z4": 25.0}.get(zid, 18.0)
     # build-up → intense → peak → decay
-    if sim_hour < 48:      peak = 0.15
-    elif sim_hour < 96:    peak = 0.45
-    elif sim_hour < 140:   peak = 0.85
-    else:                  peak = 1.0
+    if sim_hour < 48:
+        peak = 0.15
+    elif sim_hour < 96:
+        peak = 0.45
+    elif sim_hour < 140:
+        peak = 0.85
+    else:
+        peak = 1.0
     diurnal = 0.6 + 0.4 * math.sin(sim_hour / 3.0)
     return max(0.0, amplitude * peak * diurnal)
 
@@ -40,7 +45,7 @@ class MockIMDAdapter(IngestionAdapter):
         self.sim_time = sim_time   # demo scrubber position; None = latest
 
     def fetch(self) -> list[dict]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         out = []
         for zid in ZONES:
             for h in range(168, 0, -1):          # full 7-day series
@@ -81,8 +86,8 @@ class MockIMDAdapter(IngestionAdapter):
     def store(self, db, records: list[dict]) -> None:
         # Mock regenerates the full 7-day window every run: replace, don't
         # append (bounds the table; combined with exact-ts dedup = idempotent).
-        from app.providers.common import replace_source_rows
         from app.models_db import RainfallObservation
+        from app.providers.common import replace_source_rows
         replace_source_rows(db, RainfallObservation, "IMD_MOCK")
         store_rainfall_rows(db, records, source="IMD_MOCK",
                             quality="DEMO_DATA")

@@ -9,11 +9,13 @@ Error semantics: invalid input -> 422, missing/unreadable model artifact ->
 coverage returns 200 with `"risk_score": null` (data-unavailable, not an
 error). `temporal_risk` is always null (Mamba chance-level, unwired).
 """
+import logging as _log
+
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from ..ml.gs_inference import assess_point, assess_tabular, assess_sequence
+from ..ml.gs_inference import assess_point, assess_sequence, assess_tabular
 
 router = APIRouter()
 

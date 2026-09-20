@@ -18,13 +18,12 @@ PATIENCE = 6
 
 
 def main():
-    import csv
     import numpy as np
     import torch.nn as nn
-    from sklearn.metrics import (precision_recall_fscore_support,
-                                 average_precision_score, brier_score_loss)
-    from app.ml.mamba_model import SelectiveSSMCell
+    from sklearn.metrics import average_precision_score, brier_score_loss, precision_recall_fscore_support
+
     from app.ml.cv_mamba import load_v2
+    from app.ml.mamba_model import SelectiveSSMCell
 
     X, y, zids, _, _ = load_v2()
     zones = sorted(set(zids.tolist()))
@@ -88,6 +87,7 @@ def main():
                          "brier": round(float(brier_score_loss(y[tei], pt)), 4)})
     scored = [z["f1"] for z in per_zone if z["f1"] is not None]
     import numpy as _np
+
     from app.ml import registry
     registry.register(
         model_id="mamba_lzo", version="lzo_v1", dataset_version="seq_real_v2",

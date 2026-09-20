@@ -6,9 +6,10 @@ It is a regional proxy for saturation, NOT slope-instrument data.
 """
 import hashlib
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+
 from app.ingest.base import IngestionAdapter
-from app.providers.common import CANONICAL_ZONES, canonical_zone, store_soil_rows
+from app.providers.common import canonical_zone, store_soil_rows
 from app.providers.imd import ZONES
 
 
@@ -24,7 +25,7 @@ class MockSMAPAdapter(IngestionAdapter):
     state = "2d old (regional proxy)"
 
     def fetch(self) -> list[dict]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         # demo: wetness correlates with rainfall history; base 0.3–0.75
         out = []
         for zid in ZONES:
@@ -67,8 +68,8 @@ class MockSMAPAdapter(IngestionAdapter):
     def store(self, db, records: list[dict]) -> None:
         # Explicitly a MODELED proxy (rain-derived), never labeled observed.
         # Full-window snapshot: replace, don't append.
-        from app.providers.common import replace_source_rows
         from app.models_db import SoilMoistureObservation
+        from app.providers.common import replace_source_rows
         replace_source_rows(db, SoilMoistureObservation, "SMAP_MOCK")
         store_soil_rows(db, records, source="SMAP_MOCK",
                         quality="DEMO_DATA — modeled proxy, not observed")

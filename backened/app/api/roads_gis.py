@@ -1,10 +1,10 @@
 """Road GIS endpoints — real OSM road geometry from PBF extraction."""
 import json
 import math
-from pathlib import Path
 from functools import lru_cache
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException, Query
-from typing import Optional
 
 router = APIRouter(tags=["roads-gis"])
 
@@ -15,7 +15,7 @@ ROADS_GEOJSON_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "p
 def _load_roads():
     if not ROADS_GEOJSON_PATH.exists():
         return None
-    with open(ROADS_GEOJSON_PATH, "r", encoding="utf-8") as f:
+    with open(ROADS_GEOJSON_PATH, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -41,7 +41,7 @@ def _point_to_segment_distance(px, py, ax, ay, bx, by):
 
 @router.get("/roads/geojson")
 def get_roads_geojson(
-    category: Optional[str] = Query(None, description="Filter: major, secondary, local, minor"),
+    category: str | None = Query(None, description="Filter: major, secondary, local, minor"),
     limit: int = Query(0, ge=0, description="0 = all features"),
 ):
     """Return real OSM road geometry as GeoJSON FeatureCollection."""
@@ -69,7 +69,7 @@ def get_roads_geojson(
 def find_nearest_road(
     lat: float = Query(..., ge=-90, le=90, description="Latitude"),
     lng: float = Query(..., ge=-180, le=180, description="Longitude"),
-    category: Optional[str] = Query(None, description="Filter category"),
+    category: str | None = Query(None, description="Filter category"),
 ):
     """Find the nearest real road to a point. Returns road info + distance."""
     data = _load_roads()

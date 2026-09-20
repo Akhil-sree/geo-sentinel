@@ -12,9 +12,7 @@ Computes:
 Window sums use hourly observations.
 """
 
-import numpy as np
 import pandas as pd
-
 
 WINDOWS = {
     "rainfall_1h": 1,
@@ -134,10 +132,7 @@ def compute_soil_features(df: pd.DataFrame) -> dict:
     cur = float(s.iloc[-1])
 
     # Soil moisture 24-hour change
-    if len(s) >= 25:
-        soil_change = float(cur - s.iloc[-25])
-    else:
-        soil_change = 0.0
+    soil_change = float(cur - s.iloc[-25]) if len(s) >= 25 else 0.0
 
     return {
         "soil_moisture_current": cur,
@@ -252,13 +247,7 @@ def build_model_sequence(
         # Rainfall slope
         # -----------------------------------------------------
 
-        if i > 0:
-            slope = (
-                float(r.iloc[i])
-                - float(r.iloc[i - 1])
-            )
-        else:
-            slope = 0.0
+        slope = float(r.iloc[i]) - float(r.iloc[i - 1]) if i > 0 else 0.0
 
         # -----------------------------------------------------
         # Soil moisture
@@ -266,13 +255,7 @@ def build_model_sequence(
 
         current_soil = float(s.iloc[i])
 
-        if i >= 24:
-            soil_change = (
-                current_soil
-                - float(s.iloc[i - 24])
-            )
-        else:
-            soil_change = 0.0
+        soil_change = (current_soil - float(s.iloc[i - 24])) if i >= 24 else 0.0
 
         # -----------------------------------------------------
         # Feature vector

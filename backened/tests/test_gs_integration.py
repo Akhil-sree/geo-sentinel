@@ -14,8 +14,9 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 
 
 def test_inventory_valid_and_numbers_verified():
-    inv = json.load(open(os.path.join(REPO, "reports", "dataset_inventory.json"),
-                         encoding="utf-8"))
+    with open(os.path.join(REPO, "reports", "dataset_inventory.json"),
+              encoding="utf-8") as _inv_fh:
+        inv = json.load(_inv_fh)
     assert len(inv["datasets"]) == 18
     by_id = {d["id"]: d for d in inv["datasets"]}
     assert by_id["gs_labels"]["rows"] == 18
@@ -28,8 +29,9 @@ def test_inventory_valid_and_numbers_verified():
 def test_configs_load():
     import yaml
     for name in ("datasets.yaml", "training.yaml", "models.yaml"):
-        cfg = yaml.safe_load(open(os.path.join(
-            REPO, "backened", "configs", name), encoding="utf-8"))
+        with open(os.path.join(
+            REPO, "backened", "configs", name), encoding="utf-8") as _cfg_fh:
+            cfg = yaml.safe_load(_cfg_fh)
         assert isinstance(cfg, dict) and len(cfg) > 3
 
 
@@ -56,6 +58,7 @@ def test_gs_inference_point_and_invalid():
 
 def test_gs_inference_sequence_and_tabular_invalid():
     import pytest
+
     from app.ml.gs_inference import assess_sequence, assess_tabular
     z = np.load(os.path.join(
         REPO, "datasets", "GEO_SENTINEL_TRAINING_PACKAGE",
@@ -73,6 +76,7 @@ def test_gs_inference_sequence_and_tabular_invalid():
 def test_gs_api_responses():
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
+
     from app.api import gs as gs_router
     app = FastAPI()
     app.include_router(gs_router.router, prefix="/api")

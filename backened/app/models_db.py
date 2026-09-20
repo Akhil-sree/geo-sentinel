@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, Float, String, DateTime, Boolean, Text, ForeignKey, Index
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.sql import func
+
 from .database import Base
+
 
 class Zone(Base):
     __tablename__ = "zones"

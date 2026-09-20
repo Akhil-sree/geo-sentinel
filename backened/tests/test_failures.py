@@ -2,11 +2,8 @@
 
 LIVE DATA UNAVAILABLE must never become live data = random numbers.
 """
-import io
 import os
 import sys
-
-import pytest
 
 
 def _resp(status=200, payload=None, text=""):
@@ -20,7 +17,6 @@ def _resp(status=200, payload=None, text=""):
                                             response=self)
 
         def json(self):
-            import json
             if isinstance(payload, Exception):
                 raise payload
             return payload
@@ -31,12 +27,13 @@ def _resp(status=200, payload=None, text=""):
 
 def test_openmeteo_malformed_json_is_stale(monkeypatch):
     import httpx
-    import app.ingest.base as base
-    from app.providers.openmeteo import OpenMeteoRainAdapter
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from app.database import Base
+
+    import app.ingest.base as base
     import app.models_db  # noqa: F401
+    from app.database import Base
+    from app.providers.openmeteo import OpenMeteoRainAdapter
     monkeypatch.setattr(httpx, "get",
                         lambda *a, **k: _resp(payload=ValueError("no json")))
     monkeypatch.setattr(base, "BACKOFF_S", [0, 0, 0])
@@ -50,12 +47,13 @@ def test_openmeteo_malformed_json_is_stale(monkeypatch):
 
 def test_openmeteo_429_is_stale_with_reason(monkeypatch):
     import httpx
-    import app.ingest.base as base
-    from app.providers.openmeteo import OpenMeteoRainAdapter
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from app.database import Base
+
+    import app.ingest.base as base
     import app.models_db  # noqa: F401
+    from app.database import Base
+    from app.providers.openmeteo import OpenMeteoRainAdapter
     monkeypatch.setattr(httpx, "get", lambda *a, **k: _resp(status=429))
     monkeypatch.setattr(base, "BACKOFF_S", [0, 0, 0])
     e = create_engine("sqlite:///:memory:")
@@ -65,7 +63,7 @@ def test_openmeteo_429_is_stale_with_reason(monkeypatch):
     assert out["status"] == "STALE"
     assert "429" in str(out.get("detail", "")) or True  # logged in IngestionLog
     logs = db.query(app.models_db.IngestionLog).all()
-    assert any("429" in (l.detail or "") or "STALE" in l.status for l in logs)
+    assert any("429" in (log.detail or "") or "STALE" in log.status for log in logs)
     db.close()
 
 
@@ -73,6 +71,7 @@ def test_openmeteo_429_is_stale_with_reason(monkeypatch):
 
 def test_invalid_gps_rejected():
     from fastapi.testclient import TestClient
+
     from app.main import app
     c = TestClient(app)
     r = c.post("/api/reports", json={"latitude": 999, "longitude": 0,
@@ -81,9 +80,11 @@ def test_invalid_gps_rejected():
 
 
 def test_invalid_media_rejected():
-    from fastapi.testclient import TestClient
-    from app.main import app
     import uuid
+
+    from fastapi.testclient import TestClient
+
+    from app.main import app
     c = TestClient(app)
     rid = f"fail-{uuid.uuid4().hex[:8]}"
     c.post("/api/reports", json={"id": rid, "latitude": 25.3,
@@ -99,9 +100,11 @@ def test_invalid_media_rejected():
 
 
 def test_duplicate_media_conflicts():
-    from fastapi.testclient import TestClient
-    from app.main import app
     import uuid
+
+    from fastapi.testclient import TestClient
+
+    from app.main import app
     c = TestClient(app)
     img = b"\xff\xd8\xff" + os.urandom(2048)
     r1 = f"dup1-{uuid.uuid4().hex[:8]}"
@@ -124,6 +127,7 @@ def test_revoked_key_rejected(monkeypatch):
     monkeypatch.setenv("API_KEYS", "good-key:operator")
     monkeypatch.delenv("ADMIN_API_KEY", raising=False)
     import importlib
+
     import app.auth as auth
     importlib.reload(auth)
     from app.main import app
@@ -138,12 +142,13 @@ def test_revoked_key_rejected(monkeypatch):
 
 def test_openmeteo_500_is_stale(monkeypatch):
     import httpx
-    import app.ingest.base as base
-    from app.providers.openmeteo import OpenMeteoSoilAdapter
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from app.database import Base
+
+    import app.ingest.base as base
     import app.models_db  # noqa: F401
+    from app.database import Base
+    from app.providers.openmeteo import OpenMeteoSoilAdapter
     monkeypatch.setattr(httpx, "get", lambda *a, **k: _resp(status=500))
     monkeypatch.setattr(base, "BACKOFF_S", [0, 0, 0])
     e = create_engine("sqlite:///:memory:")
@@ -170,9 +175,9 @@ def test_corrupt_rf_artifact_falls_back(tmp_path):
 # ---------- real-data pipelines: DEM derive + temporal gate ----------
 
 def test_dem_derive_sane():
+    import glob as _glob
     import importlib.util
     import json
-    import glob as _glob
     spec = importlib.util.spec_from_file_location(
         "fetch_dem", "scripts/fetch_dem.py")
     mod = importlib.util.module_from_spec(spec)
@@ -182,7 +187,8 @@ def test_dem_derive_sane():
     # fetch_dem.py outputs only (dem_Z*.json); sibling caches (demgrid_*,
     # ner_dem_*) have their own schemas and gates
     for fn in sorted(_glob.glob("data/raw/dem_Z*.json")):
-        d = mod.derive(json.load(open(fn))["elevations_m"])
+        with open(fn, encoding="utf-8") as fh:
+            d = mod.derive(json.load(fh)["elevations_m"])
         assert 0 <= d["slope_deg"] <= 90
         assert 0 <= d["aspect_deg"] < 360
         assert d["ruggedness_m"] >= 0 and d["relief_m"] >= 0
@@ -191,8 +197,8 @@ def test_dem_derive_sane():
 
 
 def test_temporal_gate_passes():
-    import sys
     import os as _os
+    import sys
     sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "..", "scripts"))
     import validate_temporal_dataset
     rep = validate_temporal_dataset.main("v2")
@@ -210,9 +216,11 @@ def test_i18n_fallback_never_machine_translates():
 
 
 def test_geo_match_assists_not_verifies():
-    from fastapi.testclient import TestClient
-    from app.main import app
     import uuid
+
+    from fastapi.testclient import TestClient
+
+    from app.main import app
     c = TestClient(app)
     rid = f"geo-{uuid.uuid4().hex[:8]}"
     c.post("/api/reports", json={"id": rid, "latitude": 25.31,
@@ -225,6 +233,7 @@ def test_geo_match_assists_not_verifies():
 
 def test_priorities_have_reasons_and_provenance():
     from fastapi.testclient import TestClient
+
     from app.main import app
     c = TestClient(app)
     p = c.get("/api/risk/emergency-priorities?t=168").json()
@@ -238,6 +247,7 @@ def test_priorities_have_reasons_and_provenance():
 
 def test_observed_cell_grid():
     from fastapi.testclient import TestClient
+
     from app.main import app
     c = TestClient(app)
     r = c.get("/api/risk/Z5/cell-grid?t=168").json()
@@ -256,8 +266,9 @@ def test_geo_backend_explicit_and_spatial():
     assert backend_name("") == "sqlite"
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from app.database import Base
+
     import app.models_db as M
+    from app.database import Base
     from app.seed import ZONES
     e = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(e)
@@ -267,8 +278,7 @@ def test_geo_backend_explicit_and_spatial():
         z["latitude"], z["longitude"] = zd["lat"], zd["lng"]
         db.add(M.Zone(**z))
     db.commit()
-    from app.geo.postgis import (zones_within_km, reports_within_km,
-                                 roads_within_km, is_postgis, ensure_postgis)
+    from app.geo.postgis import ensure_postgis, is_postgis, reports_within_km, roads_within_km, zones_within_km
     assert is_postgis(db) is False
     assert ensure_postgis(db) == {"applied": False,
                                   "reason": "sqlite backend — nothing to do"}
@@ -287,8 +297,9 @@ def test_postgis_sql_compiles_without_server():
     """The postgresql query path is verified by compilation (no server here):
     ST_DWithin + ST_GeogFromText must appear in the emitted SQL."""
     from sqlalchemy.dialects import postgresql
-    from app.models_db import Zone
+
     from app.geo.postgis import _pg_point_within
+    from app.models_db import Zone
     q = Zone.__table__.select().where(_pg_point_within(Zone, 25.3, 91.7, 30.0))
     sql = str(q.compile(dialect=postgresql.dialect(),
                         compile_kwargs={"literal_binds": True}))
@@ -298,6 +309,7 @@ def test_postgis_sql_compiles_without_server():
 
 def test_api_contract_and_observability():
     from fastapi.testclient import TestClient
+
     from app.main import app
     c = TestClient(app)
     spec = c.get("/openapi.json").json()
@@ -314,9 +326,10 @@ def test_api_contract_and_observability():
 
 def test_alert_lifecycle_states():
     from fastapi.testclient import TestClient
-    from app.main import app
-    from app.database import SessionLocal
+
     import app.models_db as M
+    from app.database import SessionLocal
+    from app.main import app
     c = TestClient(app)
     db = SessionLocal()
     db.query(M.Alert).filter(M.Alert.zone_id == "Z3").delete()
@@ -346,8 +359,8 @@ def test_alert_lifecycle_states():
 # ---------- model missing: labeled fallback, never crash ----------
 
 def test_missing_rf_artifact_uses_labeled_fallback(monkeypatch):
-    from app.services import sim
     from app.ml import rf_model
+    from app.services import sim
     monkeypatch.setattr(rf_model.RFModel, "available", lambda self: False)
     out = sim.run_pipeline(48)
     assert len(out) == 8
@@ -362,12 +375,13 @@ def test_worker_lock(tmp_path, monkeypatch):
     monkeypatch.setattr(w, "INTERVAL", 900)
     assert w._single_instance() is True  # no lock: run
     # Fresh FOREIGN heartbeat (live peer elsewhere): exit.
-    import json, time
-    json.dump({"at": time.time(), "pid": 999999, "host": "peer-host"},
-              open(str(tmp_path / "w.lock"), "w"))
+    import json
+    import time
+    with open(str(tmp_path / "w.lock"), "w") as fh:
+        json.dump({"at": time.time(), "pid": 999999, "host": "peer-host"}, fh)
     assert w._single_instance() is False  # fresh peer heartbeat: exit
-    json.dump({"at": time.time() - 3600, "pid": 1, "host": "peer-host"},
-              open(str(tmp_path / "w.lock"), "w"))
+    with open(str(tmp_path / "w.lock"), "w") as fh:
+        json.dump({"at": time.time() - 3600, "pid": 1, "host": "peer-host"}, fh)
     assert w._single_instance() is True  # stale: crashed predecessor
     # Own fresh heartbeat (restarted self, same host+pid): take over instead
     # of exit-looping until stale (compose restart fix, 2026-09-18).

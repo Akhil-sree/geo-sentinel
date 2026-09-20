@@ -202,6 +202,10 @@ def test_dem_derive_sane():
     assert checked == 8  # one SRTM grid per zone
 
 
+@pytest.mark.skipif(
+    not os.path.exists(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "sequences_v2.npz")),
+    reason="sequences_v2.npz absent (local-only data/processed/)",
+)
 def test_temporal_gate_passes():
     import os as _os
     import sys
@@ -251,6 +255,10 @@ def test_priorities_have_reasons_and_provenance():
     assert m[0]["risk_provenance"]["satellite"]["used"] is False
 
 
+@pytest.mark.skipif(
+    not os.path.exists(os.path.join(os.path.dirname(__file__), "..", "data", "raw", "demgrid_Z5.json")),
+    reason="demgrid_Z5.json absent (local-only data/raw/)",
+)
 def test_observed_cell_grid():
     from fastapi.testclient import TestClient
 

@@ -354,6 +354,10 @@ def test_http_e2e_chain():
     assert "safe" not in rt.get("reason", "").lower().replace("lower-exposure", "")
 
 
+@pytest.mark.skipif(
+    not os.path.exists(os.path.join(os.path.dirname(__file__), "..", "data", "raw", "demgrid_Z1.json")),
+    reason="demgrid_Z1.json absent (local-only data/raw/)",
+)
 def test_cell_grid_batched_and_deterministic():
     """cell-grid: batched RF predict matches row-wise math + stable across calls."""
     from fastapi.testclient import TestClient

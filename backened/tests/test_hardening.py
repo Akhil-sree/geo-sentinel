@@ -13,6 +13,14 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+_REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_DEM_TIF = os.path.join(_REPO, "datasets", "n25_e091_1arc_v3.tif")
+_MAMBA_NPZ = os.path.join(
+    _REPO, "datasets", "GEO_SENTINEL_TRAINING_PACKAGE",
+    "GEO_SENTINEL_TRAINING_PACKAGE", "MAMBA",
+    "meghalaya_mamba_supervised_tensor_15f.npz",
+)
+
 from app.api import gs as gs_router  # noqa: E402
 
 
@@ -30,6 +38,10 @@ def test_gs_point_out_of_range_returns_422():
     assert r.status_code == 422
 
 
+@pytest.mark.skipif(
+    not os.path.exists(_DEM_TIF),
+    reason="SRTM raster n25_e091_1arc_v3.tif absent (local-only datasets/)",
+)
 def test_gs_point_valid_still_200_with_null_temporal():
     c = _gs_client()
     r = c.get("/api/risk/gs_point", params={"lat": 25.30, "lon": 91.70})
@@ -66,6 +78,10 @@ def test_gs_sequence_empty_and_oversize_return_422():
                   json={"sequence": wrong_width}).status_code == 422
 
 
+@pytest.mark.skipif(
+    not os.path.exists(_MAMBA_NPZ),
+    reason="MAMBA tensor npz absent (local-only datasets/)",
+)
 def test_gs_sequence_valid_returns_null_temporal():
     c = _gs_client()
     seq = [[0.1] * 15] * 49
@@ -214,6 +230,10 @@ def test_worker_restart_self_takes_over_but_peer_blocked(tmp_path, monkeypatch):
     assert not os.path.exists(w.LOCK_PATH)
 
 
+@pytest.mark.skipif(
+    not os.path.exists(_DEM_TIF),
+    reason="SRTM raster n25_e091_1arc_v3.tif absent (local-only datasets/)",
+)
 def test_known_coordinate_regression():
     """Map/GIS: a known in-coverage coordinate gives a stable HIGH static
     assessment; swapped lat/lon is rejected (no silent wrong-location risk)."""

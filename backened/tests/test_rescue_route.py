@@ -4,10 +4,19 @@ Proves: real road geometry (never straight lines), no duplicates/reversals,
 blocked-road exclusion, honest unavailable responses, derived ETA.
 """
 import math
+import os
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+
+ROADS_GEOJSON = os.path.join(os.path.dirname(__file__), "..", "data", "processed", "roads.geojson")
+
+pytestmark = pytest.mark.skipif(
+    not os.path.exists(ROADS_GEOJSON),
+    reason="roads.geojson absent (local-only data/processed/ — run scripts/extract_roads.py)",
+)
 
 client = TestClient(app)
 

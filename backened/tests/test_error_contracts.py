@@ -6,6 +6,9 @@ Semantics enforced:
   422 = schema validation failure
   503 = unavailable dependency (missing roads file, untrained model)
 """
+import os
+
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -76,6 +79,10 @@ def test_invalid_query_is_422_not_200_error():
     assert r.status_code == 422, r.text
 
 
+@pytest.mark.skipif(
+    not os.path.exists(os.path.join(os.path.dirname(__file__), "..", "data", "processed", "roads.geojson")),
+    reason="roads.geojson absent (local-only data/processed/)",
+)
 def test_roads_endpoints_healthy_shapes():
     r = client.get("/api/roads/geojson")
     assert r.status_code == 200, r.text

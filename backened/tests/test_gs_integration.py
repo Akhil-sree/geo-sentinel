@@ -6,11 +6,19 @@ import os
 import sys
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "data"))
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+_DEM_TIF = os.path.join(REPO, "datasets", "n25_e091_1arc_v3.tif")
+_MAMBA_NPZ = os.path.join(
+    REPO, "datasets", "GEO_SENTINEL_TRAINING_PACKAGE",
+    "GEO_SENTINEL_TRAINING_PACKAGE", "MAMBA",
+    "meghalaya_mamba_supervised_tensor_15f.npz",
+)
 
 
 def test_inventory_valid_and_numbers_verified():
@@ -43,6 +51,10 @@ def test_train_all_segformer_refuses():
     assert r.returncode == 0 and "BLOCKED" in r.stdout
 
 
+@pytest.mark.skipif(
+    not os.path.exists(_DEM_TIF),
+    reason="SRTM raster n25_e091_1arc_v3.tif absent (local-only datasets/)",
+)
 def test_gs_inference_point_and_invalid():
     from app.ml.gs_inference import assess_point
     ok = assess_point(25.30, 91.70)
@@ -56,6 +68,10 @@ def test_gs_inference_point_and_invalid():
         assess_point(999, 0)
 
 
+@pytest.mark.skipif(
+    not os.path.exists(_MAMBA_NPZ),
+    reason="MAMBA tensor npz absent (local-only datasets/)",
+)
 def test_gs_inference_sequence_and_tabular_invalid():
     import pytest
 
@@ -73,6 +89,10 @@ def test_gs_inference_sequence_and_tabular_invalid():
         assess_tabular({"Slope_deg": 1.0})  # incomplete schema
 
 
+@pytest.mark.skipif(
+    not os.path.exists(_DEM_TIF),
+    reason="SRTM raster n25_e091_1arc_v3.tif absent (local-only datasets/)",
+)
 def test_gs_api_responses():
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
